@@ -1,2 +1,3 @@
 [deps]
+BLPDemand = "c9742c04-3141-4011-ba40-1120baaac28c"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
