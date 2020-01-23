@@ -6,8 +6,11 @@ makedocs(;
     pages=[
         "Home" => "index.md",
     ],
-    repo="https://github.com/schrimpf/BLPDemand.jl/blob/{commit}{path}#L{line}",
+    repo="https://github.com/UBCECON567/BLPDemand.jl/blob/{commit}{path}#L{line}",
     sitename="BLPDemand.jl",
     authors="Paul Schrimpf <paul.schrimpf@gmail.com>",
-    assets=String[],
+    #assets=String[],
 )
+
+
+deploydocs(repo="github.com/UBCECON567/BLPDemand.jl.git")
