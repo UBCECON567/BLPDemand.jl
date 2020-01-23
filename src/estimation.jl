@@ -48,7 +48,7 @@ end
                    p::AbstractVector,
                    x::AbstractMatrix,
                    ν::AbstractMatrix,
-                   ξ::AbstractVecvtor)
+                   ξ::AbstractVector)
 
 Compute market shares in BLP random coefficients demand model.
 
@@ -79,7 +79,7 @@ function sharep(β::AbstractVector,
                 p::AbstractVector,
                 x::AbstractMatrix,
                 ν::AbstractMatrix,
-                ξ::AbstractVecvtor)
+                ξ::AbstractVector)
   @views δ = β[1]*p + x'*β[2:end] + ξ
   J = length(δ)
   K = length(σ)
