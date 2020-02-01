@@ -3,7 +3,10 @@ module BLPDemand
 import DataFrames
 import CSV
 import ForwardDiff
-using LinearAlgebra: dot, norm, Diagonal, inv
+import NLsolve
+using LinearAlgebra: dot, norm, Diagonal, inv, I
+using Optim
+using JuMP, Ipopt
 #import StatsBase
 #import StatsModels
 
@@ -16,9 +19,15 @@ export
   supplymoments,
   eqprices,
   simulateIVRClogit,
-  simulateBLP
+  simulateBLP,
+  pack,
+  estimateRCIVlogit,
+  makeivblp,
+  estimateBLP
+
 
 include("data.jl")
+include("share.jl")
 include("estimation.jl")
 include("simulate.jl")
 

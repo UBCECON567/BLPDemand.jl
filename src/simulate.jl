@@ -20,7 +20,7 @@ Simulates a random coefficients logit model with endogeneity.
 - `ν` random draws used to compute market shares, `size(ν) = (K,S,T)`
 - `ξ` market demand shocks, `size(ξ) = (J,T)`
 """
-function simulateIVRClogit(T, β, σ, π, ρ, S)  
+function simulateIVRClogit(T, β, σ, π, ρ, S; varξ=1)  
   (niv, nchar, J) = size(π)
   x = zeros(nchar, J, T)
   ξ = zeros(J,T)
@@ -28,7 +28,7 @@ function simulateIVRClogit(T, β, σ, π, ρ, S)
   endo = randn(length(β), T)
   for j in 1:J
     x[:,j,:] = π[:,:,j]'*z[:,j,:] .+ endo
-    ξ[j,:] = randn(T)*sqrt(1-ρ^2) .+ endo[1,:].*ρ
+    ξ[j,:] = (randn(T)*sqrt(1-ρ^2) .+ endo[1,:].*ρ)*varξ
   end
   ν = randn(nchar, S, T)
   s = zeros(J,T)
@@ -56,23 +56,24 @@ Simulates a BLP demand and supply model.
 - `x` array of product characteristics with `size(x) = (K, J, T)`
 - `z` array of instruments with `size(z) = (L, J, T)`
 - `s` matrix of market shares `size(s) = (J,T)`
-- `ν` random draws used to compute market shares, `size(ν) = (K,S,T)`
+- `ν` random draws used to compute market shares, `size(ν) = (K,S,T)`. `log(-ν[1,:,:])` is N(0,1) the other components of ν are N(0,1). It is important that β[1] + σ[1]*ν[1,:,:] is negative.
 - `ξ` market demand shocks, `size(ξ) = (J,T)`
 """
-function simulateBLP(J, T, β, σ, γ, S)
+function simulateBLP(J, T, β::AbstractVector, σ::AbstractVector, γ::AbstractVector, S;
+                     varξ=1, varω=1)
   
   K = length(β)
-  x = randn(K, J, T)
-  ξ = randn(J,T)
+  x = rand(K, J, T)
+  ξ = randn(J,T)*varξ
   L = length(γ)
-  w = randn(L, J, T)
+  w = rand(L, J, T)
   ν = randn(K, S, T)
-  ω = randn(J,T)
+  ν[1,:,:] .= -rand(S,T) # make sure individuals price coefficients are negative
+  ω = randn(J,T)*varω
   s = zeros(J,T)
   p = zeros(J,T)
 
   for t in 1:T
-
     c = exp.(w[:,:,t]'*γ + ω[:,t])
     p[:,t] .= eqprices(c, β, σ, ξ[:,t], x[2:end,:,t], ν[:,:,t])
 
