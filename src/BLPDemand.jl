@@ -7,6 +7,7 @@ import NLsolve
 using LinearAlgebra: dot, norm, Diagonal, inv, I
 using Optim
 using JuMP, Ipopt
+using Statistics: cov
 #import StatsBase
 #import StatsModels
 
@@ -23,7 +24,9 @@ export
   pack,
   estimateRCIVlogit,
   makeivblp,
-  estimateBLP
+  estimateBLP,
+  varianceBLP,
+  optimalIV
 
 
 include("data.jl")

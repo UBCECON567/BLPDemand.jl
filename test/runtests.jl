@@ -161,11 +161,11 @@ end
   β = ones(K)*0.2
   σ = ones(K)*0.2
   ρ = 0.8
-  π0 = zeros(K+1,K,J)
+  π0 = zeros(2K,K,J)
   for k in 1:K
     π0[k,k,:] .= 1
+    π0[K+k,k, :] .= 1
   end
-  π0[K+1, :, :] .= 1
   
   sim = simulateIVRClogit(T, β, σ, π0, ρ, S, varξ=0.2)
 
@@ -191,15 +191,23 @@ end
   γ = ones(2)*0.3
   
   sim = simulateBLP(J,T, β, σ, γ, S, varξ=0.2, varω=0.2)   
-  z = cat(makeivblp(sim.x[2:end,:,:]), sim.w, dims=1)
+  z = makeivblp(cat(sim.x[2:end,:,:], sim.w, dims=1))
   
-  nfxp = estimateBLP(sim.s, sim.x, sim.ν, z, sim.w, z, method=:NFXP, verbose=true)
-  mpec = estimateBLP(sim.s, sim.x, sim.ν, z, sim.w, z, method=:MPEC, verbose=true)
+  @time nfxp = estimateBLP(sim.s, sim.x, sim.ν, z, sim.w, z, method=:NFXP, verbose=true)
+  @time mpec = estimateBLP(sim.s, sim.x, sim.ν, z, sim.w, z, method=:MPEC, verbose=true)
 
   @test isapprox(nfxp.β, mpec.β, rtol=eps(Float64)^(1/4))
   @test isapprox(nfxp.σ, mpec.σ, rtol=eps(Float64)^(1/4))
   @test isapprox(nfxp.γ, mpec.γ, rtol=eps(Float64)^(1/4))  
   @test isapprox(nfxp.ξ, mpec.ξ, rtol=eps(Float64)^(1/4))
   @test isapprox(nfxp.ω, mpec.ω, rtol=eps(Float64)^(1/4))
+
+  var = varianceBLP(mpec.β, mpec.σ, mpec.γ, sim.s, sim.x, sim.ν, z, sim.w, z)
+
+  zd,zs=optimalIV(mpec.β, mpec.σ, mpec.γ, sim.s, sim.x, sim.ν, z, sim.w)
+
+  @time oiv = estimateBLP(sim.s, sim.x, sim.ν, zd, sim.w, zs, method=:MPEC, verbose=true)
+  vopt = varianceBLP(oiv.β, oiv.σ, oiv.γ, sim.s, sim.x, sim.ν, zd, sim.w, zs)
+  
   
 end
