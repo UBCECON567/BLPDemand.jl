@@ -32,29 +32,8 @@ function demandmoments(β::AbstractVector,σ::AbstractVector,
     @views moments[k] = sum(ξ.*ivdemand[k,:,:])/length(ξ)
   end
   
-  #obj = size(ξ,2)*moments[:]'*W*moments[:]
   return((moments=moments, ξ=ξ))
 end
-
-# function demandmoments(β::AbstractVector,
-#                        σ::AbstractVector,
-#                        ξ::AbstractMatrix, 
-#                        s::AbstractMatrix, 
-#                        x, ν, ivdemand)
-#   # compute δ 
-#   #ξ = similar(s)
-#   #for t in 1:size(s,2)
-#   #  @views ξ[:,t] = delta(s[:,t], x[:,:,t], ν[:,:,t], σ) .- x[:,:,t]' * β
-#   #end
-  
-#   moments = similar(ξ, size(ivdemand,1))
-#   for k in 1:size(ivdemand,1)
-#     @views moments[k] = sum(ξ.*ivdemand[k,:,:])/length(ξ)
-#   end
-  
-#   #obj = size(ξ,2)*moments[:]'*W*moments[:]
-#   return((moments=moments, ξ=ξ))
-# end
 
 
 function safelog(x)
@@ -120,63 +99,6 @@ function supplymoments(γ::AbstractVector, β::AbstractVector, σ::AbstractVecto
     #@views mi[LinearIndices(moments)[j,k], :] .= ω[j,:].*ivsupply[k,j,:]      
   end
   return((moments=moments, ω=ω))
-end
-
-"""
-    function eqprices(mc::AbstractVector,
-                      β::AbstractVector, σ::AbstractVector,
-                      ξ::AbstractVector,
-                      x, ν;
-                      firmid= 1:length(mc),
-                      tol=sqrt(eps(eltype(mc))),
-                      maxiter=10000)
-
-Compute equilibrium prices in BLP model using ζ contraction method of [Morrow & Skerlos (2011)](
-https://www.jstor.org/stable/23013173). 
-
-# Arguments
-
-- `mc` vector of `J` marginal costs
-- `β` vector of `K` taste coefficients
-- `σ` vector of `K` taste standard deviations
-- `ξ` vector of `J` demand shocks
-- `x` `(K-1) × J` exogenous product characteristics
-- `ν` `K × S × T` array of draws of `ν`
-- `firmid= (1:J)` identifier of firm producing each good. Default value assumes each good is produced by a different firm. 
-- `tol` convergence tolerance
-- `maxiter` maximum number of iterations.
-
-"""
-function eqprices(mc::AbstractVector,
-                  β::AbstractVector, σ::AbstractVector,
-                  ξ::AbstractVector,
-                  x, ν;
-                  firmid= 1:length(mc),
-                  tol=sqrt(eps(eltype(mc))),
-                  maxiter=10000, verbose=false)
-
-  iter = 0
-  dp = 10*tol
-  focnorm = 10*tol
-  p = mc*1.1
-  pold = copy(p)
-  samefirm = firmid.==firmid'  
-  while (iter < maxiter) && ((dp > tol) || (focnorm > tol))
-    s, ds, Λ, Γ = dsharedp(β, σ, p, x, ν, ξ)    
-    ζ = inv(Λ)*(samefirm.*Γ)*(p - mc) - inv(Λ)*s
-    focnorm = norm(Λ*(p-mc - ζ))
-    pold, p = p, pold
-    p .= mc .+ ζ
-    dp = norm(p-pold)
-    if verbose && (iter % 100 == 0)
-      @show iter, p, focnorm
-    end
-    iter += 1    
-  end
-  if verbose
-    @show iter, p, focnorm
-  end
-  return(p)  
 end
 
 
@@ -669,10 +591,9 @@ end
               firmid=1:size(s,1), degree=2)
 
 Computes optimal instruments for BLP model. Given initial estimates θ=(`β`, `σ`, `γ`), computes
-`e(θ)ⱼₜ = (ξ(θ)ⱼₜ , ω(θ)ⱼₜ)`
-
-Approximates the optimal instruments with a polynomial regression of `degree` of 
-`∂e/∂θ` on `z`. Returns fitted values from this polynomial regression.
+`e(θ)ⱼₜ = (ξ(θ)ⱼₜ , ω(θ)ⱼₜ)`, and then
+approximates the optimal instruments with a polynomial regression of `degree` of 
+`∂e/∂θ` on `z`. Returns fitted values `(zd, zs) = (E[∂ξ/∂θ|z], E[∂ω/∂θ|z])`  
 """
 function optimalIV(β,σ, γ, 
                    s::AbstractMatrix,

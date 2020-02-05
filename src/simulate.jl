@@ -38,6 +38,64 @@ function simulateIVRClogit(T, β, σ, π, ρ, S; varξ=1)
   return((x=x, z=z, s=s, ν=ν, ξ=ξ))
 end
 
+
+"""
+    function eqprices(mc::AbstractVector,
+                      β::AbstractVector, σ::AbstractVector,
+                      ξ::AbstractVector,
+                      x, ν;
+                      firmid= 1:length(mc),
+                      tol=sqrt(eps(eltype(mc))),
+                      maxiter=10000)
+
+Compute equilibrium prices in BLP model using ζ contraction method of [Morrow & Skerlos (2011)](
+https://www.jstor.org/stable/23013173). 
+
+# Arguments
+
+- `mc` vector of `J` marginal costs
+- `β` vector of `K` taste coefficients
+- `σ` vector of `K` taste standard deviations
+- `ξ` vector of `J` demand shocks
+- `x` `(K-1) × J` exogenous product characteristics
+- `ν` `K × S × T` array of draws of `ν`
+- `firmid= (1:J)` identifier of firm producing each good. Default value assumes each good is produced by a different firm. 
+- `tol` convergence tolerance
+- `maxiter` maximum number of iterations.
+
+"""
+function eqprices(mc::AbstractVector,
+                  β::AbstractVector, σ::AbstractVector,
+                  ξ::AbstractVector,
+                  x, ν;
+                  firmid= 1:length(mc),
+                  tol=sqrt(eps(eltype(mc))),
+                  maxiter=10000, verbose=false)
+
+  iter = 0
+  dp = 10*tol
+  focnorm = 10*tol
+  p = mc*1.1
+  pold = copy(p)
+  samefirm = firmid.==firmid'  
+  while (iter < maxiter) && ((dp > tol) || (focnorm > tol))
+    s, ds, Λ, Γ = dsharedp(β, σ, p, x, ν, ξ)    
+    ζ = inv(Λ)*(samefirm.*Γ)*(p - mc) - inv(Λ)*s
+    focnorm = norm(Λ*(p-mc - ζ))
+    pold, p = p, pold
+    p .= mc .+ ζ
+    dp = norm(p-pold)
+    if verbose && (iter % 100 == 0)
+      @show iter, p, focnorm
+    end
+    iter += 1    
+  end
+  if verbose
+    @show iter, p, focnorm
+  end
+  return(p)  
+end
+
 """
     function simulateBLP(T, β, σ, γ, S)  
 

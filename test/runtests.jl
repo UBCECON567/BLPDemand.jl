@@ -209,5 +209,36 @@ end
   @time oiv = estimateBLP(sim.s, sim.x, sim.ν, zd, sim.w, zs, method=:MPEC, verbose=true)
   vopt = varianceBLP(oiv.β, oiv.σ, oiv.γ, sim.s, sim.x, sim.ν, zd, sim.w, zs)
   
+  @time gel = estimateBLP(sim.s, sim.x, sim.ν, zd, sim.w, zs, method=:GEL, verbose=true)
   
 end
+
+tbl = vcat(["" "True" "NFXP" "MPEC" "GEL"],
+           [(i->"β[$i]").(1:length(β)) β nfxp.β mpec.β gel.β],
+           [(i->"σ[$i]").(1:length(σ)) σ nfxp.σ mpec.σ gel.σ],
+           [(i->"γ[$i]").(1:length(γ)) γ nfxp.γ mpec.γ gel.γ])
+pretty_table(tbl, noheader=true, formatter=ft_printf("%6.3f",3:5))
+
+s = sim.s; x=sim.x; ν=sim.ν; w=sim.w
+
+@time nfxp = estimateBLP(s, x, ν, z, w, z, method=:NFXP, verbose=true);
+@time mpec = estimateBLP(s, x, ν, z, w, z, method=:MPEC,verbose=true);
+@time gel = estimateBLP(s, x, ν, z, w, z, method=:GEL,verbose=true);
+
+vnfxp = varianceBLP(nfxp.β, nfxp.σ, nfxp.γ, s, x, ν, z, w, z)
+vmpec = varianceBLP(mpec.β, mpec.σ, mpec.γ, s, x, ν, z, w, z)
+v = varianceBLP(gel.β, gel.σ, gel.γ, s, x, ν, z, w, z)
+vgel = varianceBLP(gel.β, gel.σ, gel.γ, s, x, ν, z, w,z,W=inv(v.varm))
+
+using Printf
+f(v) = @sprintf("(%.2f)", sqrt(v))
+vtbl = permutedims(hcat(tbl[1,:],
+                        [hcat(tbl[i+1,:],
+                              ["", "", f.([vnfxp.Σ[i,i], vmpec.Σ[i,i], vgel.Σ[i,i]])...])
+                         for i in 1:size(vgel.Σ,1)]...
+                        ))
+pretty_table(vtbl, noheader=true, formatter=ft_printf("%6.3f",3:5))
+
+
+zd,zs=optimalIV(mpec.β, mpec.σ, mpec.γ, s, x, ν, z, w)
+
