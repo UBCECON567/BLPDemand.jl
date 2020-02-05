@@ -65,11 +65,3 @@ and minimize a quadratic form in the corresponding empirical moments
 See [`supplymoments`](@ref) and [`estimateBLP`](@ref)
 
 
-```@autodocs
-Modules = [BLPDemand]
-```
-
-## Index
-
-```@index
-```

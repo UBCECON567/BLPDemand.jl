@@ -5,7 +5,8 @@ makedocs(;
     format=Documenter.HTML(),
     pages=[
       "Home" => "index.md",
-      "Simulations" => "simulation.md"
+      "Simulations" => "simulation.md",
+      "Function Reference" => "functions.md"
     ],
     repo="https://github.com/UBCECON567/BLPDemand.jl/blob/{commit}{path}#L{line}",
     sitename="BLPDemand.jl",

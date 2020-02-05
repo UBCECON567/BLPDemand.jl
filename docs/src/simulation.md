@@ -38,6 +38,7 @@ instruments.
 
 ```@example sim
 z = makeivblp(cat(x[2:end,:,:], w, dims=1));
+size(z)
 ```
 
 ## Estimation
@@ -46,11 +47,13 @@ We can now estimate the model. Three methods are available:
 GMM with nested-fixed point (`:NFXP`), constrained GMM (`:MPEC`), and
 constrained GEL (`:GEL`). See [`estimateBLP`](@ref). 
 
-```@example sim
-@time nfxp = estimateBLP(s, x, ν, z, w, z, method=:NFXP, verbose=true);
+```@repl sim
+@time nfxp = estimateBLP(s, x, ν, z, w, z, method=:NFXP, verbose=false)
 @time mpec = estimateBLP(s, x, ν, z, w, z, method=:MPEC,verbose=true);
 @time gel = estimateBLP(s, x, ν, z, w, z, method=:GEL,verbose=true);
+```
 
+```@example sim
 tbl = vcat(["" "True" "NFXP" "MPEC" "GEL"],
            [(i->"β[$i]").(1:length(β)) β nfxp.β mpec.β gel.β],
            [(i->"σ[$i]").(1:length(σ)) σ nfxp.σ mpec.σ gel.σ],
@@ -74,6 +77,7 @@ by either of GMM estimation methods.
 ```@example sim
 vnfxp = varianceBLP(nfxp.β, nfxp.σ, nfxp.γ, s, x, ν, z, w, z);
 vmpec = varianceBLP(mpec.β, mpec.σ, mpec.γ, s, x, ν, z, w, z);
+nothing
 ```
 
 
@@ -128,11 +132,17 @@ values from this regression as ``f(z)`` results in much more precise
 estimates of ``\theta``. 
 
 ```@example sim
-zd,zs=optimalIV(mpec.β, mpec.σ, mpec.γ, s, x, ν, z, w)
-@time nfxp = estimateBLP(s, x, ν, zd, w, zs, method=:NFXP, verbose=true);
-@time mpec = estimateBLP(s, x, ν, zd, w, zs, method=:MPEC,verbose=true);
-@time gel = estimateBLP(s, x, ν, zd, w, zs, method=:GEL,verbose=true);
+zd,zs=optimalIV(gel.β, max.(gel.σ, 0.1), # calculating optimal IV with σ near 0 gives poor peformance
+                gel.γ, s, x, ν, z, w);
+```
 
+```@repl sim
+@time nfxp = estimateBLP(s, x, ν, zd, w, zs, method=:NFXP, verbose=false)
+@time mpec = estimateBLP(s, x, ν, zd, w, zs, method=:MPEC,verbose=false);
+@time gel = estimateBLP(s, x, ν, zd, w, zs, method=:GEL,verbose=false);
+```
+
+```@example sim
 vnfxp = varianceBLP(nfxp.β, nfxp.σ, nfxp.γ, s, x, ν, zd, w, zs)
 vmpec = varianceBLP(mpec.β, mpec.σ, mpec.γ, s, x, ν, zd, w, zs)
 v = varianceBLP(gel.β, gel.σ, gel.γ, s, x, ν, zd, w, zs)
