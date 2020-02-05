@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Simulations · BLPDemand.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">BLPDemand.jl</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li class="is-active"><a class="tocitem" href>Simulations</a><ul class="internal"><li><a class="tocitem" href="#Generate-Data-1"><span>Generate Data</span></a></li><li><a class="tocitem" href="#Instruments-1"><span>Instruments</span></a></li><li><a class="tocitem" href="#Estimation-1"><span>Estimation</span></a></li><li><a class="tocitem" href="#Inference-1"><span>Inference</span></a></li><li><a class="tocitem" href="#Optimal-Instruments-1"><span>Optimal Instruments</span></a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Simulations</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Simulations</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/UBCECON567/BLPDemand.jl/blob/master/docs/src/simulation.md#L" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Simulations-1"><a class="docs-heading-anchor" href="#Simulations-1">Simulations</a><a class="docs-heading-anchor-permalink" href="#Simulations-1" title="Permalink"></a></h1><p>Here we perform some monte-carlo simulations to illustrute package usage and estimator performance. See <a href="@ref"><code>Model</code></a> for an overview of the model. The tests directory contains some additional examples.</p><h2 id="Generate-Data-1"><a class="docs-heading-anchor" href="#Generate-Data-1">Generate Data</a><a class="docs-heading-anchor-permalink" href="#Generate-Data-1" title="Permalink"></a></h2><pre><code class="language-julia">using BLPDemand, Statistics, PrettyTables, Printf
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Simulations · BLPDemand.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">BLPDemand.jl</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li class="is-active"><a class="tocitem" href>Simulations</a><ul class="internal"><li><a class="tocitem" href="#Generate-Data-1"><span>Generate Data</span></a></li><li><a class="tocitem" href="#Instruments-1"><span>Instruments</span></a></li><li><a class="tocitem" href="#Estimation-1"><span>Estimation</span></a></li><li><a class="tocitem" href="#Inference-1"><span>Inference</span></a></li><li><a class="tocitem" href="#Optimal-Instruments-1"><span>Optimal Instruments</span></a></li></ul></li><li><a class="tocitem" href="../functions/">Function Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Simulations</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Simulations</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/UBCECON567/BLPDemand.jl/blob/master/docs/src/simulation.md#L" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Simulations-1"><a class="docs-heading-anchor" href="#Simulations-1">Simulations</a><a class="docs-heading-anchor-permalink" href="#Simulations-1" title="Permalink"></a></h1><p>Here we perform some monte-carlo simulations to illustrute package usage and estimator performance. See <a href="@ref"><code>Model</code></a> for an overview of the model. The tests directory contains some additional examples.</p><h2 id="Generate-Data-1"><a class="docs-heading-anchor" href="#Generate-Data-1">Generate Data</a><a class="docs-heading-anchor-permalink" href="#Generate-Data-1" title="Permalink"></a></h2><pre><code class="language-julia">using BLPDemand, Statistics, PrettyTables, Printf
 K = 3             # number of characteristics
 J = 5             # number of products
 S = 20            # draws of nu
@@ -11,1758 +11,41 @@ T = 100           # number of markets
 
 (x, w, p, s, ν, ξ, ω) = simulateBLP(J,T, β, σ, γ, S, varξ=0.2, varω=0.2)
 @show quantile(s[:], [0, 0.05, 0.5, 0.95, 1])</code></pre><pre><code class="language-none">5-element Array{Float64,1}:
- 0.005883304038353052
- 0.02325029639859201 
- 0.0983979928211744  
- 0.293828055981239   
- 0.40114737021302227 </code></pre><p>Estimation will encounter numerical difficulties if market shares are very close (within 1e-4) to 0 or 1. The above range should be fine. </p><h2 id="Instruments-1"><a class="docs-heading-anchor" href="#Instruments-1">Instruments</a><a class="docs-heading-anchor-permalink" href="#Instruments-1" title="Permalink"></a></h2><p>In the simulated data <code>x[2:end,:,:]</code> and <code>w</code> are uncorrelated with <code>ξ</code> and <code>ω</code>, but price, <code>x[1,:,:]</code>, is endogenous. The price of the <code>j</code>th firm will depend on the characteristics and costs of all other goods, so these are available as instruments. <a href="../#BLPDemand.makeivblp"><code>makeivblp</code></a> is a convenience function that constructs the sum of all other firms&#39; exogenous variables to use as instruments. This is similar to what Berry, Levinsohn, and Pakes (1995) do. We will see below though that much more accurate estimates can be obtained by using the optimal instruments. </p><pre><code class="language-julia">z = makeivblp(cat(x[2:end,:,:], w, dims=1));</code></pre><pre><code class="language-none">8×5×100 Array{Float64,3}:
-[:, :, 1] =
- 0.806948   0.809592  0.942156   0.1406     0.444486  
- 0.0800354  0.954779  0.555285   0.0118886  0.00379706
- 0.98502    0.335426  0.0218142  0.0900342  0.901866  
- 0.716242   0.416991  0.872534   0.458779   0.465412  
- 2.33683    2.33419   2.20163    3.00318    2.6993    
- 1.52575    0.651006  1.0505     1.5939     1.60199   
- 1.34914    1.99873   2.31235    2.24413    1.43229   
- 2.21372    2.51297   2.05742    2.47118    2.46455   
+ 0.008409480756265155
+ 0.021267146273090162
+ 0.09953151765157145 
+ 0.30074286916282045 
+ 0.426762399856928   </code></pre><p>Estimation will encounter numerical difficulties if market shares are very close (within 1e-4) to 0 or 1. The above range should be fine. </p><h2 id="Instruments-1"><a class="docs-heading-anchor" href="#Instruments-1">Instruments</a><a class="docs-heading-anchor-permalink" href="#Instruments-1" title="Permalink"></a></h2><p>In the simulated data <code>x[2:end,:,:]</code> and <code>w</code> are uncorrelated with <code>ξ</code> and <code>ω</code>, but price, <code>x[1,:,:]</code>, is endogenous. The price of the <code>j</code>th firm will depend on the characteristics and costs of all other goods, so these are available as instruments. <a href="../functions/#BLPDemand.makeivblp"><code>makeivblp</code></a> is a convenience function that constructs the sum of all other firms&#39; exogenous variables to use as instruments. This is similar to what Berry, Levinsohn, and Pakes (1995) do. We will see below though that much more accurate estimates can be obtained by using the optimal instruments. </p><pre><code class="language-julia">z = makeivblp(cat(x[2:end,:,:], w, dims=1));
+size(z)</code></pre><pre><code class="language-none">(8, 5, 100)</code></pre><h2 id="Estimation-1"><a class="docs-heading-anchor" href="#Estimation-1">Estimation</a><a class="docs-heading-anchor-permalink" href="#Estimation-1" title="Permalink"></a></h2><p>We can now estimate the model. Three methods are available: GMM with nested-fixed point (<code>:NFXP</code>), constrained GMM (<code>:MPEC</code>), and constrained GEL (<code>:GEL</code>). See <a href="../functions/#BLPDemand.estimateBLP-Tuple{AbstractArray{T,2} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T}"><code>estimateBLP</code></a>. </p><pre><code class="language-julia-repl">julia&gt; @time nfxp = estimateBLP(s, x, ν, z, w, z, method=:NFXP, verbose=false)
+(β0, σ0, γ0) = ([-1.6241058717742332, 2.0304512720706374, 2.0319705761775575], [1.0, 1.0, 1.0], [0.3312418108487214, 0.29501363925461427])
+objectiveBLP(θ0) = 2672.1329430856185
+ 75.201023 seconds (313.18 M allocations: 18.166 GiB, 10.63% gc time)
+(β = [-1.5222753888134453, 2.0330409587551053, 2.075138182897657], σ = [0.2395996904560702, 0.19258871641118974, 0.08027208648466355], γ = [0.34801272608668127, 0.33148600062965056], ξ = [-0.1773759337288171 -0.2275699369310058 … 0.12391353630587709 0.4104663618413563; 0.40373524355298285 -0.09974615919602581 … 0.0989895541524144 -0.07739215395461313; … ; -0.06670446902590932 -0.2592902077622403 … 0.2362743999072539 0.38332398017034075; 0.25020446718901707 0.04139110817610314 … -0.14983606811711025 0.016045196077960844], ω = [0.1439781246858966 0.22898186242380775 … -0.016833637944271562 -0.012198118027232585; -0.21638709604058848 -0.513971375467652 … 0.1006519334709175 0.05426902038159298; … ; 0.30162440213426644 -0.13422656373410974 … -0.1322926220944935 -0.25346241376806683; -0.04782045709231145 0.11763729058872074 … 0.15614819303611727 -0.18584644543554146], opt =  * Status: failure (objective increased between iterations) (line search failed)
 
-[:, :, 2] =
- 0.505331   0.947198  0.455277  0.691655  0.43358 
- 0.0540211  0.515408  0.603905  0.563226  0.580606
- 0.886048   0.933712  0.326562  0.498382  0.312305
- 0.305726   0.758838  0.283425  0.914413  0.27276 
- 2.52771    2.08584   2.57776   2.34139   2.59946 
- 2.26315    1.80176   1.71326   1.75394   1.73656 
- 2.07096    2.0233    2.63045   2.45863   2.6447  
- 2.22944    1.77632   2.25174   1.62075   2.2624  
+ * Candidate solution
+    Minimizer: [-1.52e+00, 2.03e+00, 2.08e+00,  ...]
+    Minimum:   1.009923e-03
 
-[:, :, 3] =
- 0.470902  0.907001   0.118581  0.855326  0.298367
- 0.597114  0.410997   0.514475  0.636026  0.377137
- 0.703302  0.414266   0.283884  0.219238  0.162639
- 0.956896  0.0527878  0.77369   0.150436  0.756415
- 2.17928   1.74318    2.5316    1.79485   2.35181 
- 1.93863   2.12475    2.02127   1.89972   2.15861 
- 1.08003   1.36906    1.49945   1.56409   1.62069 
- 1.73333   2.63744    1.91653   2.53979   1.93381 
+ * Found with
+    Algorithm:     L-BFGS
+    Initial Point: [-1.62e+00, 2.03e+00, 2.03e+00,  ...]
 
-...
+ * Convergence measures
+    |x - x&#39;|               = 6.69e-04 ≰ 0.0e+00
+    |x - x&#39;|/|x&#39;|          = 2.65e-04 ≰ 0.0e+00
+    |f(x) - f(x&#39;)|         = 3.08e-11 ≰ 0.0e+00
+    |f(x) - f(x&#39;)|/|f(x&#39;)| = 3.05e-08 ≰ 0.0e+00
+    |g(x)|                 = 4.28e-03 ≰ 1.0e-08
 
-[:, :, 98] =
- 0.608976  0.912807  0.45979   0.0475834  0.722232 
- 0.580357  0.17465   0.376749  0.89559    0.0332705
- 0.937933  0.100076  0.977776  0.521542   0.168975 
- 0.421219  0.619683  0.557936  0.334824   0.82027  
- 2.14241   1.83858   2.2916    2.70381    2.02916  
- 1.48026   1.88597   1.68387   1.16503    2.02735  
- 1.76837   2.60623   1.72853   2.18476    2.53733  
- 2.33271   2.13425   2.196     2.41911    1.93366  
+ * Work counters
+    Seconds run:   18  (vs limit Inf)
+    Iterations:    215
+    f(x) calls:    585
+    ∇f(x) calls:   585
+)
 
-[:, :, 99] =
- 0.315862   0.542404  0.744719  0.243543  0.14724 
- 0.538778   0.939439  0.356053  0.868258  0.406232
- 0.674027   0.831192  0.208856  0.336479  0.432294
- 0.0779627  0.894478  0.491174  0.538648  0.734493
- 1.67791    1.45136   1.24905   1.75022   1.84653 
- 2.56998    2.16932   2.75271   2.2405    2.70253 
- 1.80882    1.65166   2.27399   2.14637   2.05055 
- 2.65879    1.84228   2.24558   2.19811   2.00226 
-
-[:, :, 100] =
- 0.688176  0.53698   0.781216   0.930878  0.871267 
- 0.521406  0.416907  0.486605   0.31854   0.581292 
- 0.908549  0.109637  0.0406006  0.775516  0.0869192
- 0.985465  0.355317  0.591286   0.342358  0.468156 
- 3.12034   3.27154   3.0273     2.87764   2.93725  
- 1.80334   1.90784   1.83814    2.00621   1.74346  
- 1.01267   1.81158   1.88062    1.14571   1.8343   
- 1.75712   2.38726   2.1513     2.40022   2.27443  </code></pre><h2 id="Estimation-1"><a class="docs-heading-anchor" href="#Estimation-1">Estimation</a><a class="docs-heading-anchor-permalink" href="#Estimation-1" title="Permalink"></a></h2><p>We can now estimate the model. Three methods are available: GMM with nested-fixed point (<code>:NFXP</code>), constrained GMM (<code>:MPEC</code>), and constrained GEL (<code>:GEL</code>). See <a href="../#BLPDemand.estimateBLP-Tuple{AbstractArray{T,2} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T}"><code>estimateBLP</code></a>. </p><pre><code class="language-julia">@time nfxp = estimateBLP(s, x, ν, z, w, z, method=:NFXP, verbose=true);
-@time mpec = estimateBLP(s, x, ν, z, w, z, method=:MPEC,verbose=true);
-@time gel = estimateBLP(s, x, ν, z, w, z, method=:GEL,verbose=true);
-
-tbl = vcat([&quot;&quot; &quot;True&quot; &quot;NFXP&quot; &quot;MPEC&quot; &quot;GEL&quot;],
-           [(i-&gt;&quot;β[$i]&quot;).(1:length(β)) β nfxp.β mpec.β gel.β],
-           [(i-&gt;&quot;σ[$i]&quot;).(1:length(σ)) σ nfxp.σ mpec.σ gel.σ],
-           [(i-&gt;&quot;γ[$i]&quot;).(1:length(γ)) γ nfxp.γ mpec.γ gel.γ])
-pretty_table(tbl, noheader=true, formatter=ft_printf(&quot;%6.3f&quot;,3:5))</code></pre><pre><code class="language-none">(β0, σ0, γ0) = ([-1.6066509465264196, 2.0089865677828476, 2.019757176261076], [1.0, 1.0, 1.0], [0.29677034122546486, 0.3019019698047313])
-objectiveBLP(θ0) = 2702.467336272501
-Iter     Function value   Gradient norm
-     0     2.702467e+03     9.763159e+03
- * time: 3.719329833984375e-5
-     1     1.731737e+03     9.536762e+03
- * time: 0.9075121879577637
-     2     4.522176e-01     9.619431e+01
- * time: 0.9460270404815674
-     3     2.233322e-01     3.344786e-01
- * time: 1.161837100982666
-     4     2.224458e-01     5.980661e+00
- * time: 1.2582499980926514
-     5     1.550764e-01     8.646655e+00
- * time: 1.3372271060943604
-     6     1.362322e-01     1.618684e+01
- * time: 1.3699061870574951
-     7     1.100865e-01     2.782651e+01
- * time: 1.4027149677276611
-     8     6.268462e-02     1.792482e+01
- * time: 1.4606599807739258
-     9     5.512355e-02     1.111001e+01
- * time: 1.4928300380706787
-    10     4.922316e-02     3.213332e+00
- * time: 1.5245721340179443
-    11     4.732746e-02     2.655924e+00
- * time: 1.5494439601898193
-    12     4.687005e-02     5.133394e+00
- * time: 1.5992980003356934
-    13     4.535304e-02     3.495280e+00
- * time: 1.655217170715332
-    14     4.502577e-02     1.927196e-01
- * time: 1.6864490509033203
-    15     4.497521e-02     1.866271e-01
- * time: 1.7367839813232422
-    16     2.905702e-02     7.550291e+00
- * time: 1.7794640064239502
-    17     2.244381e-02     5.212055e-01
- * time: 1.8045411109924316
-    18     2.101006e-02     3.052753e+00
- * time: 1.8371469974517822
-    19     2.021154e-02     5.328342e+00
- * time: 1.8797509670257568
-    20     1.802329e-02     1.163046e+00
- * time: 1.9431190490722656
-    21     1.794543e-02     3.938052e-01
- * time: 1.9753990173339844
-    22     1.790156e-02     1.537548e-01
- * time: 2.00105619430542
-    23     1.787691e-02     1.088319e-01
- * time: 2.0454530715942383
-    24     1.558351e-02     8.581896e+00
- * time: 2.121518135070801
-    25     1.155305e-02     3.389451e+00
- * time: 2.152179002761841
-    26     1.054218e-02     5.858579e-01
- * time: 2.204564094543457
-    27     6.998222e-03     4.142583e+00
- * time: 2.2492830753326416
-    28     6.676840e-03     8.087607e-01
- * time: 2.2808520793914795
-    29     6.647436e-03     1.089102e+00
- * time: 2.312709093093872
-    30     6.621356e-03     3.694518e-01
- * time: 2.3709170818328857
-    31     6.617812e-03     3.745187e-02
- * time: 2.4148900508880615
-    32     5.710771e-03     4.791585e-02
- * time: 2.5533981323242188
-    33     5.414533e-03     3.662975e-01
- * time: 2.6111371517181396
-    34     5.403946e-03     3.222340e-02
- * time: 2.6548540592193604
-    35     5.403259e-03     7.683492e-02
- * time: 2.697406053543091
-    36     5.315363e-03     1.187456e+00
- * time: 2.7923800945281982
-    37     4.935938e-03     2.293651e+00
- * time: 2.8365139961242676
-    38     4.748751e-03     3.202126e-01
- * time: 2.861078977584839
-    39     4.645830e-03     1.185111e+00
- * time: 2.910248041152954
-    40     4.546760e-03     7.454889e-01
- * time: 2.9527201652526855
-    41     4.524660e-03     1.595046e-01
- * time: 2.996687173843384
-    42     4.511149e-03     1.443204e-01
- * time: 3.0211269855499268
-    43     4.508646e-03     5.321107e-02
- * time: 3.0697531700134277
-    44     4.507659e-03     1.230198e-01
- * time: 3.1119110584259033
-    45     4.503523e-03     3.204991e-02
- * time: 3.166109085083008
-    46     4.384621e-03     6.428584e-01
- * time: 3.22698712348938
-    47     4.082987e-03     1.134956e+00
- * time: 3.27105712890625
-    48     3.862981e-03     1.045349e+00
- * time: 3.2962591648101807
-    49     3.725902e-03     2.662349e-01
- * time: 3.326282024383545
-    50     3.647559e-03     5.228617e-01
- * time: 3.3576571941375732
-    51     3.621514e-03     3.610683e-01
- * time: 3.3986849784851074
-    52     3.617209e-03     6.077648e-01
- * time: 3.429229974746704
-    53     3.566833e-03     4.418433e-01
- * time: 3.4832041263580322
-    54     3.541656e-03     3.406264e-01
- * time: 3.5274741649627686
-    55     3.534502e-03     1.760903e-01
- * time: 3.570214033126831
-    56     3.526582e-03     1.988434e-02
- * time: 3.6089391708374023
-    57     3.521048e-03     1.772826e-01
- * time: 3.640408992767334
-    58     3.515923e-03     2.403856e-01
- * time: 3.683659076690674
-    59     3.513649e-03     1.973593e-02
- * time: 3.7138571739196777
-    60     3.507979e-03     5.627150e-02
- * time: 3.758409023284912
-    61     3.500687e-03     7.635011e-02
- * time: 3.801596164703369
-    62     3.493372e-03     1.869255e-01
- * time: 3.8263351917266846
-    63     3.482469e-03     2.242919e-01
- * time: 3.869767189025879
-    64     3.461238e-03     1.585272e-01
- * time: 3.9012529850006104
-    65     3.437294e-03     3.708738e-01
- * time: 3.9324791431427
-    66     3.400530e-03     6.769102e-01
- * time: 3.9634900093078613
-    67     3.355640e-03     3.207194e-01
- * time: 3.986906051635742
-    68     3.338184e-03     1.176796e-01
- * time: 4.018251180648804
-    69     3.301588e-03     2.636517e-01
- * time: 4.049237012863159
-    70     3.280874e-03     2.773125e-01
- * time: 4.079341173171997
-    71     3.276230e-03     2.668362e-02
- * time: 4.103860139846802
-    72     3.274980e-03     1.692486e-01
- * time: 4.145209074020386
-    73     3.269396e-03     1.281869e-01
- * time: 4.206293106079102
-    74     3.266886e-03     2.649201e-01
- * time: 4.230518102645874
-    75     3.263196e-03     1.246182e-01
- * time: 4.280693054199219
-    76     3.261344e-03     2.209353e-02
- * time: 4.324208974838257
-    77     3.261089e-03     6.197972e-02
- * time: 4.368152141571045
-    78     3.260981e-03     6.977093e-03
- * time: 4.391771078109741
-    79     3.260921e-03     7.226758e-03
- * time: 4.440207004547119
-    80     3.260674e-03     1.408702e-02
- * time: 4.463576078414917
-    81     3.260373e-03     9.052337e-03
- * time: 4.4939329624176025
-    82     3.260304e-03     7.266276e-03
- * time: 4.526437997817993
-    83     3.251002e-03     4.969628e-01
- * time: 4.581736087799072
-    84     3.173136e-03     5.910431e-01
- * time: 4.624577045440674
-    85     2.972232e-03     1.347709e+00
- * time: 4.655864000320435
-    86     2.930972e-03     4.458951e-01
- * time: 4.687013149261475
-    87     2.915500e-03     2.325583e-01
- * time: 4.729480028152466
-    88     2.903274e-03     1.905790e-01
- * time: 4.772825002670288
-    89     2.902187e-03     1.328487e-01
- * time: 4.812632083892822
-    90     2.897002e-03     3.131947e-01
- * time: 4.8603410720825195
-    91     2.892500e-03     5.677332e-02
- * time: 4.904519081115723
-    92     2.890674e-03     2.027315e-01
- * time: 4.949825048446655
-    93     2.889225e-03     4.017031e-02
- * time: 4.979947090148926
-    94     2.888094e-03     9.250230e-02
- * time: 5.022911071777344
-    95     2.887448e-03     2.931330e-02
- * time: 5.066357135772705
-    96     2.887236e-03     3.665165e-02
- * time: 5.109986066818237
-    97     2.887154e-03     2.298560e-02
- * time: 5.1345741748809814
-    98     2.886925e-03     5.296944e-02
- * time: 5.186063051223755
-    99     2.886772e-03     8.117931e-03
- * time: 5.211006164550781
-   100     2.886683e-03     1.835104e-03
- * time: 5.255177974700928
-   101     2.886481e-03     3.507073e-02
- * time: 5.299414157867432
-   102     2.886333e-03     8.274574e-03
- * time: 5.349358081817627
-   103     2.886313e-03     6.848168e-04
- * time: 5.392091989517212
-   104     2.886312e-03     1.420903e-03
- * time: 5.436963081359863
-   105     2.886304e-03     6.013980e-03
- * time: 5.49323296546936
-   106     2.886252e-03     2.684865e-02
- * time: 5.554839134216309
-   107     2.885300e-03     5.269105e-02
- * time: 5.622311115264893
-   108     2.880194e-03     1.842117e-01
- * time: 5.665651082992554
-   109     2.872440e-03     3.285467e-01
- * time: 5.697751998901367
-   110     2.858899e-03     3.166236e-01
- * time: 5.729515075683594
-   111     2.856917e-03     2.908551e-01
- * time: 5.761803150177002
-   112     2.852403e-03     2.743303e-01
- * time: 5.8063740730285645
-   113     2.852137e-03     2.834270e-01
- * time: 5.830734968185425
-   114     2.848155e-03     2.036250e-01
- * time: 5.863263130187988
-   115     2.836230e-03     1.398520e-01
- * time: 5.907415151596069
-   116     2.834432e-03     2.089375e-01
- * time: 5.94180703163147
-   117     2.825771e-03     5.516804e-01
- * time: 5.985419988632202
-   118     2.819366e-03     4.276415e-02
- * time: 6.016448020935059
-   119     2.811371e-03     1.597925e-01
- * time: 6.061079025268555
-   120     2.810048e-03     1.955643e-01
- * time: 6.085139036178589
-   121     2.805668e-03     2.621410e-01
- * time: 6.1162731647491455
-   122     2.800913e-03     3.841387e-01
- * time: 6.15542197227478
-   123     2.793839e-03     7.087829e-02
- * time: 6.201405048370361
-   124     2.792082e-03     2.829524e-02
- * time: 6.233361005783081
-   125     2.783974e-03     2.790735e-01
- * time: 6.257354021072388
-   126     2.780652e-03     1.593945e-01
- * time: 6.289015054702759
-   127     2.778766e-03     3.070884e-01
- * time: 6.332952976226807
-   128     2.773568e-03     3.303154e-01
- * time: 6.381461143493652
-   129     2.766066e-03     1.809285e-01
- * time: 6.4156670570373535
-   130     2.762230e-03     2.843841e-01
- * time: 6.461546182632446
-   131     2.757148e-03     5.468515e-02
- * time: 6.495769023895264
-   132     2.755874e-03     2.520707e-02
- * time: 6.5207929611206055
-   133     2.753870e-03     1.181445e-01
- * time: 6.55313515663147
-   134     2.751752e-03     2.340282e-01
- * time: 6.587471961975098
-   135     2.750519e-03     1.264856e-01
- * time: 6.631591081619263
-   136     2.749106e-03     2.144869e-01
- * time: 6.675132989883423
-   137     2.746022e-03     2.392352e-01
- * time: 6.717718124389648
-   138     2.731839e-03     1.305132e-01
- * time: 6.76082706451416
-   139     2.728843e-03     2.543350e-01
- * time: 6.791799068450928
-   140     2.722441e-03     5.074777e-03
- * time: 6.82302713394165
-   141     2.721480e-03     1.493061e-01
- * time: 6.846529960632324
-   142     2.719037e-03     2.508812e-01
- * time: 6.890204191207886
-   143     2.712673e-03     3.478887e-01
- * time: 6.952782154083252
-   144     2.708713e-03     6.182317e-02
- * time: 6.97728705406189
-   145     2.704860e-03     9.633297e-02
- * time: 7.008740186691284
-   146     2.704266e-03     1.288387e-01
- * time: 7.040260076522827
-   147     2.702420e-03     2.176702e-01
- * time: 7.071706056594849
-   148     2.700709e-03     2.637688e-01
- * time: 7.116643190383911
-   149     2.698013e-03     1.300759e-01
- * time: 7.16025710105896
-   150     2.696502e-03     4.115944e-02
- * time: 7.1852850914001465
-   151     2.695131e-03     3.352589e-02
- * time: 7.215694189071655
-   152     2.693240e-03     1.470095e-01
- * time: 7.245973110198975
-   153     2.692774e-03     5.556267e-02
- * time: 7.277804136276245
-   154     2.691711e-03     1.189077e-01
- * time: 7.3223841190338135
-   155     2.689999e-03     2.396192e-01
- * time: 7.3462371826171875
-   156     2.683445e-03     1.895721e-01
- * time: 7.3896870613098145
-   157     2.680161e-03     1.609525e-01
- * time: 7.421123027801514
-   158     2.676696e-03     5.306433e-03
- * time: 7.483860969543457
-   159     2.676247e-03     3.629699e-02
- * time: 7.5099241733551025
-   160     2.675165e-03     1.261512e-01
- * time: 7.541006088256836
-   161     2.674602e-03     1.714090e-01
- * time: 7.585108995437622
-   162     2.673008e-03     3.793928e-02
- * time: 7.640701055526733
-   163     2.672346e-03     7.318869e-02
- * time: 7.671691179275513
-   164     2.670382e-03     1.206039e-01
- * time: 7.714349031448364
-   165     2.668817e-03     2.205244e-01
- * time: 7.74493408203125
-   166     2.667618e-03     6.968056e-02
- * time: 7.775928974151611
-   167     2.666448e-03     1.314880e-01
- * time: 7.818524122238159
-   168     2.665335e-03     2.014393e-01
- * time: 7.848631143569946
-   169     2.662698e-03     1.586671e-01
- * time: 7.905054092407227
-   170     2.656047e-03     1.202521e-01
- * time: 7.966922044754028
-   171     2.655420e-03     2.165336e-01
- * time: 8.008676052093506
-   172     2.653153e-03     5.855138e-03
- * time: 8.05128002166748
-   173     2.652034e-03     1.126713e-01
- * time: 8.095667123794556
-   174     2.651083e-03     2.048390e-01
- * time: 8.126760959625244
-   175     2.648061e-03     1.777429e-01
- * time: 8.16933298110962
-   176     2.633325e-03     1.307516e-01
- * time: 8.223356008529663
-   177     2.630138e-03     1.369232e-01
- * time: 8.254584074020386
-   178     2.629552e-03     1.004226e-01
- * time: 8.28528118133545
-   179     2.625734e-03     7.779284e-02
- * time: 8.341259956359863
-   180     2.624715e-03     1.370767e-01
- * time: 8.372313022613525
-   181     2.622201e-03     2.760751e-01
- * time: 8.396209001541138
-   182     2.618390e-03     3.181337e-01
- * time: 8.438920974731445
-   183     2.615330e-03     2.158619e-01
- * time: 8.469422101974487
-   184     2.606548e-03     7.855555e-02
- * time: 8.511979103088379
-   185     2.605687e-03     3.203741e-03
- * time: 8.54280400276184
-   186     2.602518e-03     9.393104e-02
- * time: 8.572915077209473
-   187     2.602022e-03     2.578132e-02
- * time: 8.624159097671509
-   188     2.601854e-03     2.105724e-02
- * time: 8.648259162902832
-   189     2.601815e-03     8.316134e-03
- * time: 8.69205617904663
-   190     2.601661e-03     1.052587e-02
- * time: 8.753874063491821
-   191     2.599796e-03     1.518805e-01
- * time: 8.79809308052063
-   192     2.596732e-03     1.919265e-01
- * time: 8.841495037078857
-   193     2.590071e-03     2.379372e-01
- * time: 8.88463807106018
-   194     2.587254e-03     7.660913e-02
- * time: 8.915882110595703
-   195     2.580166e-03     1.027304e-01
- * time: 8.939727067947388
-   196     2.578608e-03     1.533099e-01
- * time: 8.970637083053589
-   197     2.572689e-03     2.756609e-01
- * time: 9.001585960388184
-   198     2.570022e-03     2.200386e-03
- * time: 9.044965982437134
-   199     2.568727e-03     1.084979e-01
- * time: 9.075904130935669
-   200     2.568456e-03     3.517566e-02
- * time: 9.121607065200806
-   201     2.568343e-03     6.159699e-02
- * time: 9.16640019416809
-   202     2.566705e-03     1.437776e-01
- * time: 9.225468158721924
-   203     2.564819e-03     2.065704e-01
- * time: 9.271857976913452
-   204     2.563713e-03     2.359522e-02
- * time: 9.306925058364868
-   205     2.562320e-03     1.249627e-01
- * time: 9.34958004951477
-   206     2.561370e-03     1.697111e-01
- * time: 9.392728090286255
-   207     2.560382e-03     2.725370e-03
- * time: 9.423180103302002
-   208     2.559220e-03     1.115335e-01
- * time: 9.447045087814331
-   209     2.558435e-03     1.760713e-01
- * time: 9.477723121643066
-   210     2.557572e-03     4.191926e-02
- * time: 9.508578062057495
-   211     2.556842e-03     1.080103e-01
- * time: 9.551769018173218
-   212     2.556065e-03     1.572892e-01
- * time: 9.594401121139526
-   213     2.555424e-03     1.547834e-02
- * time: 9.619407176971436
-   214     2.554761e-03     7.714034e-02
- * time: 9.670140027999878
-   215     2.554420e-03     1.034159e-01
- * time: 9.694506168365479
-   216     2.554240e-03     2.427585e-02
- * time: 9.726564168930054
-   217     2.554029e-03     3.564884e-02
- * time: 9.770596981048584
-   218     2.553505e-03     7.130707e-02
- * time: 9.813594102859497
-   219     2.553281e-03     1.135455e-02
- * time: 9.845036029815674
-   220     2.553142e-03     5.067970e-02
- * time: 9.890115976333618
-   221     2.552689e-03     8.767675e-02
- * time: 9.935655117034912
-   222     2.552052e-03     2.011651e-02
- * time: 9.978821039199829
-   223     2.551811e-03     2.969733e-02
- * time: 10.009907960891724
-   224     2.551595e-03     6.273402e-02
- * time: 10.05193305015564
-   225     2.551291e-03     2.329246e-02
- * time: 10.094813108444214
-   226     2.550872e-03     4.171300e-02
- * time: 10.120548963546753
-   227     2.550688e-03     6.970520e-02
- * time: 10.151944160461426
-   228     2.550221e-03     5.931594e-02
- * time: 10.196053981781006
-   229     2.550111e-03     7.384138e-02
- * time: 10.227212190628052
-   230     2.549104e-03     8.244188e-02
- * time: 10.270514965057373
-   231     2.549100e-03     1.787422e-01
- * time: 10.301460981369019
-   232     2.548574e-03     1.244541e-01
- * time: 10.388357162475586
-   233     2.547963e-03     7.422280e-02
- * time: 10.455772161483765
-   234     2.547168e-03     2.491924e-02
- * time: 10.486751079559326
-   235     2.544480e-03     1.381871e-01
- * time: 10.518341064453125
-   236     2.544174e-03     6.229352e-02
- * time: 10.543015956878662
-   237     2.543230e-03     1.525815e-01
- * time: 10.593382120132446
-   238     2.540761e-03     2.454950e-01
- * time: 10.639250993728638
-   239     2.532981e-03     2.084069e-01
- * time: 10.684895992279053
-   240     2.527442e-03     1.573841e-01
- * time: 10.708636999130249
-   241     2.524901e-03     1.428866e-02
- * time: 10.739550113677979
-   242     2.524131e-03     1.100061e-01
- * time: 10.782921075820923
-   243     2.522603e-03     1.467579e-02
- * time: 10.825937032699585
-   244     2.521652e-03     9.769960e-02
- * time: 10.881603956222534
-   245     2.521352e-03     1.546827e-02
- * time: 10.929136037826538
-   246     2.520557e-03     7.165066e-02
- * time: 10.983841180801392
-   247     2.520120e-03     9.546153e-02
- * time: 11.02405309677124
-   248     2.519009e-03     1.640420e-02
- * time: 11.064311027526855
-   249     2.518729e-03     4.028786e-02
- * time: 11.092621088027954
-   250     2.518155e-03     8.328576e-02
- * time: 11.132739067077637
-   251     2.517666e-03     3.761793e-02
- * time: 11.181956052780151
-   252     2.516574e-03     7.792535e-02
- * time: 11.211311101913452
-   253     2.516222e-03     1.167160e-01
- * time: 11.241042137145996
-   254     2.514821e-03     1.259514e-01
- * time: 11.297312021255493
-   255     2.514790e-03     1.264882e-01
- * time: 11.320446014404297
-   256     2.514590e-03     1.317776e-01
- * time: 11.350090980529785
-   257     2.513821e-03     7.404032e-03
- * time: 11.379853963851929
-   258     2.513441e-03     5.037019e-02
- * time: 11.403831005096436
-   259     2.513299e-03     8.164272e-02
- * time: 11.446231126785278
-   260     2.512123e-03     1.445840e-01
- * time: 11.506294012069702
-   261     2.510089e-03     8.652167e-02
- * time: 11.548848152160645
-   262     2.509850e-03     6.090178e-02
- * time: 11.57277512550354
-   263     2.509033e-03     7.469896e-03
- * time: 11.603959083557129
-   264     2.508354e-03     3.577370e-02
- * time: 11.639584064483643
-   265     2.506897e-03     1.348082e-01
- * time: 11.672422170639038
-   266     2.506288e-03     8.319021e-02
- * time: 11.696913003921509
-   267     2.505689e-03     1.866120e-01
- * time: 11.728660106658936
-   268     2.501645e-03     2.484175e-01
- * time: 11.770823001861572
-   269     2.497777e-03     3.929677e-02
- * time: 11.801167964935303
-   270     2.496107e-03     1.395756e-01
- * time: 11.843886137008667
-   271     2.495413e-03     2.129580e-02
- * time: 11.867014169692993
-   272     2.495171e-03     6.862253e-02
- * time: 11.896810054779053
-   273     2.495019e-03     1.559989e-02
- * time: 11.937548160552979
-   274     2.494356e-03     9.749480e-02
- * time: 11.99566102027893
-   275     2.493272e-03     1.504565e-01
- * time: 12.03542709350586
-   276     2.492011e-03     1.175655e-02
- * time: 12.058938980102539
-   277     2.491490e-03     7.356607e-02
- * time: 12.088644981384277
-   278     2.490878e-03     1.390252e-01
- * time: 12.119208097457886
-   279     2.490304e-03     4.082920e-02
- * time: 12.170459985733032
-   280     2.489740e-03     1.213918e-01
- * time: 12.212999105453491
-   281     2.488947e-03     8.386482e-02
- * time: 12.255079984664917
-   282     2.488252e-03     1.124020e-01
- * time: 12.298082113265991
-   283     2.486914e-03     4.926744e-02
- * time: 12.340131044387817
-   284     2.486458e-03     2.472753e-02
- * time: 12.39333701133728
-   285     2.486113e-03     8.348344e-02
- * time: 12.423845052719116
-   286     2.485760e-03     8.691860e-02
- * time: 12.465527057647705
-   287     2.485612e-03     9.096252e-02
- * time: 12.495553970336914
-   288     2.484472e-03     1.028558e-01
- * time: 12.537492036819458
-   289     2.482258e-03     5.843099e-02
- * time: 12.58058214187622
-   290     2.480588e-03     1.874207e-01
- * time: 12.604501962661743
-   291     2.471898e-03     1.739609e-01
- * time: 12.646530151367188
-   292     2.471558e-03     1.947957e-01
- * time: 12.677313089370728
-   293     2.466323e-03     7.939410e-02
- * time: 12.708422183990479
-   294     2.463137e-03     9.085206e-02
- * time: 12.731745958328247
-   295     2.462376e-03     7.095034e-02
- * time: 12.780725002288818
-   296     2.462153e-03     1.213497e-01
- * time: 12.804779052734375
-   297     2.461060e-03     1.588506e-01
- * time: 12.84757113456726
-   298     2.459200e-03     1.062255e-01
- * time: 12.889530181884766
-   299     2.457654e-03     6.556036e-02
- * time: 12.931888103485107
-   300     2.456730e-03     1.321226e-01
- * time: 12.981464147567749
-   301     2.455851e-03     1.040442e-01
- * time: 13.021865129470825
-   302     2.455781e-03     9.031419e-02
- * time: 13.052685976028442
-   303     2.455366e-03     1.935248e-02
- * time: 13.083238124847412
-   304     2.455209e-03     3.143419e-03
- * time: 13.12515115737915
-   305     2.454613e-03     7.401118e-02
- * time: 13.166762113571167
-   306     2.454037e-03     8.685894e-02
- * time: 13.208811044692993
-   307     2.451320e-03     2.199265e-01
- * time: 13.249973058700562
-   308     2.449881e-03     5.143959e-02
- * time: 13.278856039047241
-   309     2.448536e-03     1.314613e-01
- * time: 13.32174015045166
-   310     2.447413e-03     1.925461e-01
- * time: 13.363839149475098
-   311     2.446454e-03     1.888263e-02
- * time: 13.387274026870728
-   312     2.445956e-03     8.138835e-02
- * time: 13.428704023361206
-   313     2.444801e-03     1.337357e-01
- * time: 13.470882177352905
-   314     2.442108e-03     2.106287e-01
- * time: 13.512299060821533
-   315     2.440579e-03     7.207422e-03
- * time: 13.543787002563477
-   316     2.438719e-03     1.238615e-01
- * time: 13.575150966644287
-   317     2.437490e-03     1.870855e-01
- * time: 13.624973058700562
-   318     2.435803e-03     3.382673e-02
- * time: 13.667915105819702
-   319     2.434296e-03     6.797871e-02
- * time: 13.691955089569092
-   320     2.433447e-03     1.129339e-01
- * time: 13.723581075668335
-   321     2.431277e-03     2.081266e-01
- * time: 13.754451036453247
-   322     2.429964e-03     6.963617e-02
- * time: 13.79786205291748
-   323     2.428611e-03     2.017625e-01
- * time: 13.82960295677185
-   324     2.425751e-03     2.418446e-01
- * time: 13.872801065444946
-   325     2.423052e-03     8.539000e-03
- * time: 13.896167039871216
-   326     2.421619e-03     8.706929e-02
- * time: 13.926684141159058
-   327     2.420541e-03     1.572962e-01
- * time: 13.95706295967102
-   328     2.418856e-03     2.012145e-01
- * time: 14.012912034988403
-   329     2.417743e-03     9.052238e-03
- * time: 14.058995008468628
-   330     2.416333e-03     1.117016e-01
- * time: 14.100556135177612
-   331     2.415376e-03     1.086896e-01
- * time: 14.142650127410889
-   332     2.414569e-03     2.427863e-01
- * time: 14.187880992889404
-   333     2.413315e-03     7.993680e-02
- * time: 14.212100982666016
-   334     2.411221e-03     1.043509e-01
- * time: 14.254472017288208
-   335     2.409273e-03     2.019814e-01
- * time: 14.285008192062378
-   336     2.406619e-03     2.104321e-02
- * time: 14.315561056137085
-   337     2.406018e-03     1.106808e-01
- * time: 14.345337152481079
-   338     2.404859e-03     1.610838e-01
- * time: 14.387319087982178
-   339     2.403833e-03     6.224486e-03
- * time: 14.42871618270874
-   340     2.403157e-03     7.479241e-02
- * time: 14.452805995941162
-   341     2.402540e-03     1.247616e-01
- * time: 14.48317813873291
-   342     2.402274e-03     3.369758e-02
- * time: 14.513748168945312
-   343     2.401910e-03     4.501504e-02
- * time: 14.554013967514038
-   344     2.401616e-03     6.728109e-02
- * time: 14.576122045516968
-   345     2.401345e-03     3.765596e-02
- * time: 14.61552906036377
-   346     2.400909e-03     3.983037e-02
- * time: 14.65508508682251
-   347     2.400585e-03     7.230805e-02
- * time: 14.694810152053833
-   348     2.400124e-03     2.536216e-02
- * time: 14.724955081939697
-   349     2.399685e-03     5.098465e-02
- * time: 14.754070043563843
-   350     2.399465e-03     4.515313e-03
- * time: 14.796671152114868
-   351     2.399400e-03     1.954413e-02
- * time: 14.838482141494751
-   352     2.399226e-03     8.123488e-03
- * time: 14.879961013793945
-   353     2.397345e-03     1.144791e-01
- * time: 14.933454990386963
-   354     2.395835e-03     6.745630e-02
- * time: 14.974384069442749
-   355     2.395308e-03     1.571566e-01
- * time: 15.00436806678772
-   356     2.394260e-03     5.377704e-02
- * time: 15.045562982559204
-   357     2.393639e-03     1.162610e-01
- * time: 15.086436986923218
-   358     2.392596e-03     8.898604e-02
- * time: 15.128715991973877
-   359     2.392285e-03     1.272493e-01
- * time: 15.15918517112732
-   360     2.391570e-03     1.723497e-02
- * time: 15.183377981185913
-   361     2.390875e-03     9.268024e-02
- * time: 15.215331077575684
-   362     2.390291e-03     1.424662e-01
- * time: 15.246541976928711
-   363     2.389232e-03     1.020205e-01
- * time: 15.28789210319519
-   364     2.388215e-03     1.222860e-01
- * time: 15.331969022750854
-   365     2.386307e-03     7.718986e-02
- * time: 15.373167037963867
-   366     2.385702e-03     9.193675e-03
- * time: 15.461107015609741
-   367     2.385517e-03     1.020595e-02
- * time: 15.484454154968262
-   368     2.385210e-03     4.079606e-02
- * time: 15.514942169189453
-   369     2.384887e-03     8.110267e-02
- * time: 15.544931173324585
-   370     2.384579e-03     1.370897e-01
- * time: 15.567842960357666
-   371     2.384123e-03     9.796127e-02
- * time: 15.610237121582031
-   372     2.382709e-03     1.448384e-01
- * time: 15.65184211730957
-   373     2.382207e-03     7.326077e-03
- * time: 15.68188214302063
-   374     2.381225e-03     1.028636e-01
- * time: 15.724212169647217
-   375     2.380798e-03     1.472323e-01
- * time: 15.754276037216187
-   376     2.380018e-03     1.031993e-03
- * time: 15.795639038085938
-   377     2.379450e-03     7.576268e-02
- * time: 15.818735122680664
-   378     2.378921e-03     1.233759e-01
- * time: 15.849191188812256
-   379     2.378512e-03     3.948835e-02
- * time: 15.879240989685059
-   380     2.378092e-03     1.082079e-01
- * time: 15.920660018920898
-   381     2.377440e-03     1.153493e-01
- * time: 15.96245813369751
-   382     2.376926e-03     1.875618e-02
- * time: 15.985857963562012
-   383     2.376463e-03     2.630563e-02
- * time: 16.015607118606567
-   384     2.376227e-03     6.302106e-02
- * time: 16.068295001983643
-   385     2.375948e-03     1.058903e-01
- * time: 16.098031997680664
-   386     2.375465e-03     9.103017e-02
- * time: 16.139531135559082
-   387     2.373802e-03     1.692434e-02
- * time: 16.202522039413452
-   388     2.373541e-03     4.815297e-02
- * time: 16.26158905029297
-   389     2.373209e-03     9.508690e-02
- * time: 16.29176902770996
-   390     2.372699e-03     1.363644e-01
- * time: 16.332798957824707
-   391     2.370672e-03     3.218714e-02
- * time: 16.37297797203064
-   392     2.370256e-03     1.042160e-01
- * time: 16.39514398574829
-   393     2.369888e-03     5.215064e-03
- * time: 16.424163103103638
-   394     2.369630e-03     5.434764e-02
- * time: 16.46361017227173
-   395     2.369441e-03     8.562983e-02
- * time: 16.49199604988098
-   396     2.369234e-03     3.690704e-03
- * time: 16.531983137130737
-   397     2.369085e-03     3.952589e-02
- * time: 16.573148012161255
-   398     2.369004e-03     1.916040e-02
- * time: 16.612934112548828
-   399     2.368846e-03     4.000764e-02
- * time: 16.65350914001465
-   400     2.368574e-03     3.085976e-02
- * time: 16.694199085235596
-   401     2.368418e-03     1.131136e-02
- * time: 16.75724196434021
-   402     2.368301e-03     3.049840e-02
- * time: 16.786026000976562
-   403     2.367954e-03     6.961581e-02
- * time: 16.81511116027832
-   404     2.367485e-03     6.058590e-02
- * time: 16.85538411140442
-   405     2.366981e-03     4.266580e-02
- * time: 16.89535117149353
-   406     2.365759e-03     1.137282e-02
- * time: 16.95830011367798
-   407     2.365669e-03     6.717175e-02
- * time: 16.999651193618774
-   408     2.365027e-03     1.112064e-01
- * time: 17.043596029281616
-   409     2.364220e-03     4.602278e-02
- * time: 17.08914017677307
-   410     2.364053e-03     2.001194e-02
- * time: 17.12032699584961
-   411     2.363803e-03     5.663220e-03
- * time: 17.150041103363037
-   412     2.363513e-03     3.317203e-02
- * time: 17.172612190246582
-   413     2.363001e-03     8.880041e-02
- * time: 17.202531099319458
-   414     2.362717e-03     6.461605e-02
- * time: 17.232540130615234
-   415     2.362398e-03     1.189821e-01
- * time: 17.273993968963623
-   416     2.361200e-03     9.397848e-02
- * time: 17.31395411491394
-   417     2.360980e-03     3.996210e-03
- * time: 17.336400032043457
-   418     2.360871e-03     2.376952e-02
- * time: 17.37753701210022
-   419     2.360761e-03     3.111760e-02
- * time: 17.436872005462646
-   420     2.360360e-03     8.578602e-02
- * time: 17.476776123046875
-   421     2.359969e-03     1.728900e-02
- * time: 17.499425172805786
-   422     2.359903e-03     4.580942e-02
- * time: 17.528385162353516
-   423     2.359837e-03     1.085399e-02
- * time: 17.575889110565186
-   424     2.359702e-03     4.235768e-02
- * time: 17.618725061416626
-   425     2.359451e-03     6.355248e-02
- * time: 17.658692121505737
-   426     2.359112e-03     5.122713e-03
- * time: 17.69885015487671
-   427     2.359021e-03     1.671464e-02
- * time: 17.72785997390747
-   428     2.358819e-03     5.748275e-02
- * time: 17.751451015472412
-   429     2.358707e-03     3.217516e-02
- * time: 17.792373180389404
-   430     2.358610e-03     6.263309e-02
- * time: 17.832736015319824
-   431     2.358383e-03     5.861927e-02
- * time: 17.87368416786194
-   432     2.358187e-03     3.137037e-02
- * time: 17.91386604309082
-   433     2.357798e-03     1.714204e-02
- * time: 17.954859972000122
-   434     2.357738e-03     3.135736e-02
- * time: 17.984315156936646
-   435     2.357527e-03     3.353738e-02
- * time: 18.036189079284668
-   436     2.357263e-03     4.605121e-02
- * time: 18.065872192382812
-   437     2.356721e-03     6.052094e-02
- * time: 18.09523916244507
-   438     2.356278e-03     4.791526e-02
- * time: 18.136593103408813
-   439     2.356219e-03     3.606697e-02
- * time: 18.159058094024658
-   440     2.356106e-03     1.407889e-02
- * time: 18.190325021743774
-   441     2.356003e-03     1.068105e-02
- * time: 18.219730138778687
-   442     2.355873e-03     5.523710e-02
- * time: 18.242125988006592
-   443     2.355689e-03     7.611038e-02
- * time: 18.284881114959717
-   444     2.355533e-03     2.919566e-03
- * time: 18.325644969940186
-   445     2.355117e-03     2.833607e-02
- * time: 18.36629605293274
-   446     2.354950e-03     5.049265e-02
- * time: 18.395023107528687
-   447     2.354570e-03     5.598136e-02
- * time: 18.43384599685669
-   448     2.354364e-03     2.591970e-02
- * time: 18.4720401763916
-   449     2.354221e-03     1.499162e-02
- * time: 18.500380992889404
-   450     2.354130e-03     2.354868e-02
- * time: 18.54176115989685
-   451     2.353856e-03     5.132272e-02
- * time: 18.582154035568237
-   452     2.353800e-03     1.374133e-02
- * time: 18.605095148086548
-   453     2.353764e-03     3.147633e-02
- * time: 18.650027990341187
-   454     2.353633e-03     6.034693e-02
- * time: 18.692922115325928
-   455     2.353306e-03     5.442551e-02
- * time: 18.73294997215271
-   456     2.353100e-03     1.946790e-02
- * time: 18.774043083190918
-   457     2.352878e-03     6.694722e-02
- * time: 18.802746057510376
-   458     2.352494e-03     1.216681e-02
- * time: 18.831483125686646
-   459     2.352359e-03     4.884214e-02
- * time: 18.860673189163208
-   460     2.351995e-03     7.805513e-02
- * time: 18.883177995681763
-   461     2.351779e-03     1.034731e-02
- * time: 18.92335295677185
-   462     2.351303e-03     4.916379e-02
- * time: 18.95251202583313
-   463     2.351201e-03     6.383984e-02
- * time: 18.981884002685547
-   464     2.350737e-03     1.012456e-01
- * time: 19.004767179489136
-   465     2.350283e-03     3.479945e-02
- * time: 19.045693159103394
-   466     2.349783e-03     1.051089e-02
- * time: 19.07481813430786
-   467     2.349546e-03     3.903300e-02
- * time: 19.126355171203613
-   468     2.349144e-03     7.969604e-02
- * time: 19.157382011413574
-   469     2.348677e-03     1.139970e-01
- * time: 19.19928503036499
-   470     2.348315e-03     2.326407e-03
- * time: 19.239264965057373
-   471     2.347410e-03     6.285876e-02
- * time: 19.283276081085205
-   472     2.347059e-03     9.575914e-02
- * time: 19.3130099773407
-   473     2.346883e-03     2.156946e-02
- * time: 19.33578610420227
-   474     2.346776e-03     3.505530e-02
- * time: 19.376525163650513
-   475     2.346591e-03     8.818139e-03
- * time: 19.440550088882446
-   476     2.346027e-03     6.078429e-02
- * time: 19.48260998725891
-   477     2.345679e-03     7.310079e-02
- * time: 19.505516052246094
-   478     2.344057e-03     1.048823e-01
- * time: 19.53555202484131
-   479     2.343565e-03     1.851749e-02
- * time: 19.565272092819214
-   480     2.343158e-03     1.460151e-02
- * time: 19.58790111541748
-   481     2.342789e-03     5.161681e-02
- * time: 19.645169019699097
-   482     2.342422e-03     8.892340e-02
- * time: 19.667782068252563
-   483     2.341828e-03     1.542347e-01
- * time: 19.695487022399902
-   484     2.340960e-03     1.680376e-02
- * time: 19.734562158584595
-   485     2.340260e-03     1.134137e-01
- * time: 19.774705171585083
-   486     2.339345e-03     9.956360e-02
- * time: 19.814949989318848
-   487     2.338439e-03     1.343269e-01
- * time: 19.855000972747803
-   488     2.337359e-03     2.179866e-03
- * time: 19.935220956802368
-   489     2.337279e-03     2.711338e-02
- * time: 19.96417999267578
-   490     2.337150e-03     6.303992e-02
- * time: 20.004204988479614
-   491     2.336916e-03     2.759360e-02
- * time: 20.044617176055908
-   492     2.336865e-03     6.735354e-03
- * time: 20.085060119628906
-   493     2.336849e-03     7.725379e-03
- * time: 20.12574005126953
-   494     2.336707e-03     1.646732e-02
- * time: 20.177671194076538
-   495     2.336370e-03     4.470373e-03
- * time: 20.219256162643433
-   496     2.336325e-03     4.183417e-02
- * time: 20.262551069259644
-   497     2.336262e-03     2.986702e-02
- * time: 20.303941011428833
-   498     2.336017e-03     4.822968e-02
- * time: 20.346009969711304
-   499     2.335846e-03     6.775134e-02
- * time: 20.375447988510132
-   500     2.335483e-03     7.290940e-02
- * time: 20.4156551361084
-   501     2.334430e-03     8.245591e-02
- * time: 20.467838048934937
-   502     2.334212e-03     4.653374e-02
- * time: 20.519674062728882
-   503     2.334044e-03     2.335873e-02
- * time: 20.54873514175415
-   504     2.333842e-03     5.730862e-03
- * time: 20.57113814353943
-   505     2.333600e-03     5.252356e-02
- * time: 20.605430126190186
-   506     2.333473e-03     6.913600e-02
- * time: 20.661275148391724
-   507     2.333343e-03     4.246588e-02
- * time: 20.704063177108765
-   508     2.333252e-03     7.766520e-02
- * time: 20.74280309677124
-   509     2.332779e-03     7.935379e-02
- * time: 20.784439086914062
-   510     2.332606e-03     4.944728e-02
- * time: 20.813663005828857
-   511     2.332246e-03     6.113083e-02
- * time: 20.852987051010132
-   512     2.331875e-03     1.932897e-02
- * time: 20.893278121948242
-   513     2.331816e-03     6.854179e-03
- * time: 20.916117191314697
-   514     2.331689e-03     1.140834e-02
- * time: 20.944525957107544
-   515     2.331549e-03     3.476959e-02
- * time: 20.972952127456665
-   516     2.331415e-03     5.727979e-02
- * time: 20.995792150497437
-   517     2.331375e-03     2.213454e-02
- * time: 21.03586506843567
-   518     2.331256e-03     3.241280e-02
- * time: 21.075706005096436
-   519     2.331104e-03     6.235565e-02
- * time: 21.115586042404175
-   520     2.330807e-03     2.976663e-02
- * time: 21.156021118164062
-   521     2.330692e-03     3.541706e-03
- * time: 21.192739963531494
-   522     2.330587e-03     1.403944e-02
- * time: 21.22197914123535
-   523     2.330399e-03     4.657891e-02
- * time: 21.244577169418335
-   524     2.330288e-03     3.973938e-02
- * time: 21.27380108833313
-   525     2.330240e-03     6.868313e-02
- * time: 21.304928064346313
-   526     2.329895e-03     5.157447e-02
- * time: 21.346562147140503
-   527     2.329811e-03     5.576135e-02
- * time: 21.370136976242065
-   528     2.329768e-03     5.364011e-02
- * time: 21.400098085403442
-   529     2.329653e-03     1.406020e-02
- * time: 21.428373098373413
-   530     2.329370e-03     4.415618e-02
- * time: 21.450824975967407
-   531     2.329253e-03     7.688973e-02
- * time: 21.479894161224365
-   532     2.328745e-03     5.573241e-02
- * time: 21.51988196372986
-   533     2.328126e-03     1.068685e-02
- * time: 21.56048607826233
-   534     2.328058e-03     7.086263e-02
- * time: 21.601210117340088
-   535     2.327796e-03     3.606459e-02
- * time: 21.647468090057373
-   536     2.327586e-03     1.089486e-02
- * time: 21.67989206314087
-   537     2.327536e-03     2.468460e-02
- * time: 21.70319700241089
-   538     2.327412e-03     5.962777e-02
- * time: 21.73311710357666
-   539     2.327180e-03     5.541435e-02
- * time: 21.775468111038208
-   540     2.327169e-03     5.708165e-02
- * time: 21.80575704574585
-   541     2.326937e-03     1.329425e-02
- * time: 21.828808069229126
-   542     2.326735e-03     5.893153e-02
- * time: 21.87056016921997
-   543     2.326481e-03     6.662691e-02
- * time: 21.911832094192505
-   544     2.326382e-03     1.020385e-02
- * time: 21.941063165664673
-   545     2.326302e-03     3.401432e-02
- * time: 21.981415033340454
-   546     2.326241e-03     1.298454e-02
- * time: 22.022130012512207
-   547     2.325992e-03     5.325703e-02
- * time: 22.062860012054443
-   548     2.325659e-03     3.183331e-02
- * time: 22.091413974761963
-   549     2.325587e-03     6.028179e-02
- * time: 22.11355996131897
-   550     2.325474e-03     1.368250e-02
- * time: 22.1419460773468
-   551     2.325385e-03     3.734236e-02
- * time: 22.18145513534546
-   552     2.325312e-03     2.727594e-02
- * time: 22.221081018447876
-   553     2.325233e-03     9.008303e-03
- * time: 22.26070499420166
-   554     2.325121e-03     2.176225e-02
- * time: 22.301265001296997
-   555     2.325012e-03     3.542892e-02
- * time: 22.33040499687195
-   556     2.324900e-03     5.407793e-03
- * time: 22.381863117218018
-   557     2.324868e-03     2.896775e-03
- * time: 22.410397052764893
-   558     2.324746e-03     3.156041e-02
- * time: 22.43291211128235
-   559     2.324606e-03     4.501639e-02
- * time: 22.472025156021118
-   560     2.324558e-03     1.024842e-02
- * time: 22.500396013259888
-   561     2.324511e-03     1.638942e-02
- * time: 22.538838148117065
-   562     2.324367e-03     4.415450e-02
- * time: 22.566926956176758
-   563     2.324329e-03     1.559687e-02
- * time: 22.590171098709106
-   564     2.324314e-03     2.482443e-02
- * time: 22.629395961761475
-   565     2.324220e-03     3.678677e-02
- * time: 22.687052965164185
-   566     2.324047e-03     4.348129e-02
- * time: 22.727007150650024
-   567     2.323895e-03     2.977587e-02
- * time: 22.74961018562317
-   568     2.323799e-03     1.257617e-03
- * time: 22.82085919380188
-   569     2.323740e-03     1.581334e-02
- * time: 22.85134506225586
-   570     2.323585e-03     5.005589e-02
- * time: 22.87354803085327
-   571     2.323508e-03     2.383900e-02
- * time: 22.902647018432617
-   572     2.323435e-03     4.621170e-02
- * time: 22.94198513031006
-   573     2.323286e-03     5.690358e-02
- * time: 22.982069969177246
-   574     2.323107e-03     2.012015e-02
- * time: 23.022160053253174
-   575     2.323050e-03     8.136850e-03
- * time: 23.051514148712158
-   576     2.323005e-03     3.046097e-02
- * time: 23.092061042785645
-   577     2.322949e-03     1.950327e-03
- * time: 23.132464170455933
-   578     2.322840e-03     1.822623e-02
- * time: 23.173022031784058
-   579     2.322781e-03     1.182374e-02
- * time: 23.213324069976807
-   580     2.322684e-03     4.209164e-02
- * time: 23.26411509513855
-   581     2.322670e-03     3.524145e-02
- * time: 23.29262113571167
-   582     2.322631e-03     1.373101e-02
- * time: 23.315169095993042
-   583     2.322579e-03     2.141020e-02
- * time: 23.357975006103516
-   584     2.322356e-03     5.079153e-02
- * time: 23.398012161254883
-   585     2.322155e-03     5.422878e-02
- * time: 23.437819004058838
-   586     2.322146e-03     5.355947e-02
- * time: 23.46686315536499
-   587     2.322122e-03     5.386590e-02
- * time: 23.49541211128235
-   588     2.322102e-03     3.996359e-02
- * time: 23.517563104629517
-   589     2.321953e-03     1.487209e-02
- * time: 23.557618141174316
-   590     2.321910e-03     3.181511e-02
- * time: 23.58604598045349
-   591     2.321837e-03     4.728090e-02
- * time: 23.618096113204956
-   592     2.321738e-03     1.988407e-02
- * time: 23.65843105316162
-   593     2.321626e-03     9.137672e-03
- * time: 23.68726396560669
-   594     2.321574e-03     3.048114e-02
- * time: 23.748759031295776
-   595     2.321481e-03     5.110463e-02
- * time: 23.77928614616394
-   596     2.321384e-03     2.961620e-03
- * time: 23.821418046951294
-   597     2.321161e-03     3.532723e-02
- * time: 23.862596035003662
-   598     2.321075e-03     5.068938e-02
- * time: 23.892418146133423
-   599     2.320752e-03     7.050609e-02
- * time: 23.93622398376465
-   600     2.320509e-03     2.313736e-02
- * time: 23.97630000114441
-   601     2.320169e-03     1.722075e-02
- * time: 23.998910188674927
-   602     2.320078e-03     3.226489e-02
- * time: 24.02817702293396
-   603     2.319890e-03     4.932049e-02
- * time: 24.05732798576355
-   604     2.319841e-03     9.179905e-03
- * time: 24.079652070999146
-   605     2.319796e-03     2.121582e-02
- * time: 24.12012004852295
-   606     2.319768e-03     5.941737e-03
- * time: 24.15945315361023
-   607     2.319677e-03     2.948748e-02
- * time: 24.200634002685547
-   608     2.319583e-03     4.587731e-02
- * time: 24.230499029159546
-   609     2.319406e-03     4.049197e-02
- * time: 24.27119016647339
-   610     2.319352e-03     5.074908e-02
- * time: 24.301719188690186
-   611     2.319294e-03     4.984432e-03
- * time: 24.32478904724121
-   612     2.319104e-03     3.470144e-02
- * time: 24.366832971572876
-   613     2.319041e-03     4.904298e-02
- * time: 24.39576005935669
-   614     2.318911e-03     2.203997e-02
- * time: 24.436110019683838
-   615     2.318857e-03     4.627957e-02
- * time: 24.4652841091156
-   616     2.318792e-03     8.098646e-03
- * time: 24.487909078598022
-   617     2.318772e-03     2.027880e-02
- * time: 24.528688192367554
-   618     2.318742e-03     1.805473e-02
- * time: 24.570230960845947
-   619     2.318682e-03     3.037488e-02
- * time: 24.59992218017578
-   620     2.318572e-03     4.222911e-03
- * time: 24.629151105880737
-   621     2.318534e-03     2.357595e-02
- * time: 24.652240991592407
-   622     2.318475e-03     4.936243e-02
- * time: 24.6944420337677
-   623     2.318285e-03     5.653582e-03
- * time: 24.73702311515808
-   624     2.318202e-03     3.631644e-02
- * time: 24.76744818687439
-   625     2.318035e-03     2.511889e-02
- * time: 24.797566175460815
-   626     2.317978e-03     3.632830e-02
- * time: 24.839930057525635
-   627     2.317927e-03     3.218068e-03
- * time: 24.864238023757935
-   628     2.317891e-03     1.896693e-02
- * time: 24.905054092407227
-   629     2.317830e-03     3.107000e-02
- * time: 24.946048974990845
-   630     2.317647e-03     3.692470e-02
- * time: 24.99287700653076
-   631     2.317561e-03     5.870158e-02
- * time: 25.023364067077637
-   632     2.317464e-03     1.017145e-02
- * time: 25.05302906036377
-   633     2.317347e-03     3.524949e-02
- * time: 25.094436168670654
-   634     2.317264e-03     5.472044e-02
- * time: 25.117823123931885
-   635     2.317186e-03     6.322019e-03
- * time: 25.147765159606934
-   636     2.317152e-03     1.939161e-02
- * time: 25.190447092056274
-   637     2.317121e-03     2.423716e-02
- * time: 25.24626898765564
-   638     2.317051e-03     5.119624e-02
- * time: 25.298647165298462
-   639     2.316853e-03     2.425813e-02
- * time: 25.34171414375305
-   640     2.316790e-03     3.795337e-02
- * time: 25.384878158569336
-   641     2.316756e-03     6.331336e-03
- * time: 25.408156156539917
-   642     2.316709e-03     2.393526e-02
- * time: 25.449503183364868
-   643     2.316670e-03     4.063127e-02
- * time: 25.479825019836426
-   644     2.316597e-03     6.482799e-03
- * time: 25.521501064300537
-   645     2.316544e-03     2.156885e-02
- * time: 25.55150318145752
-   646     2.316500e-03     3.134090e-02
- * time: 25.593675136566162
-   647     2.316479e-03     5.218537e-03
- * time: 25.616539001464844
-   648     2.316433e-03     1.198092e-02
- * time: 25.657950162887573
-   649     2.316410e-03     1.974746e-02
- * time: 25.686848163604736
-   650     2.316364e-03     2.296658e-02
- * time: 25.726977109909058
-   651     2.316218e-03     8.818669e-03
- * time: 25.77901005744934
-   652     2.316203e-03     2.216530e-02
- * time: 25.81954598426819
-   653     2.316117e-03     1.436004e-02
- * time: 25.862502098083496
-   654     2.316081e-03     2.394170e-02
- * time: 25.892614126205444
-   655     2.316049e-03     8.667798e-03
- * time: 25.933340072631836
-   656     2.315941e-03     2.016546e-02
- * time: 25.975234985351562
-   657     2.315919e-03     2.703079e-02
- * time: 26.00482702255249
-   658     2.315793e-03     4.893339e-02
- * time: 26.028439044952393
-   659     2.315607e-03     7.401651e-03
- * time: 26.069018125534058
-   660     2.315532e-03     3.350075e-02
- * time: 26.098430156707764
-   661     2.315244e-03     6.002632e-02
- * time: 26.127413034439087
-   662     2.315150e-03     4.729644e-03
- * time: 26.150257110595703
-   663     2.314986e-03     2.775755e-02
- * time: 26.198251962661743
-   664     2.314907e-03     3.749613e-02
- * time: 26.22834610939026
-   665     2.314886e-03     9.808191e-03
- * time: 26.25846004486084
-   666     2.314877e-03     1.091508e-02
- * time: 26.301480054855347
-   667     2.314855e-03     1.293625e-02
- * time: 26.324815034866333
-   668     2.314787e-03     2.601245e-02
- * time: 26.354578971862793
-   669     2.314773e-03     9.052108e-03
- * time: 26.386285066604614
-   670     2.314765e-03     1.735341e-02
- * time: 26.42885112762451
-   671     2.314738e-03     1.033176e-02
- * time: 26.46986198425293
-   672     2.314630e-03     1.715555e-02
- * time: 26.511029958724976
-   673     2.314613e-03     2.528925e-02
- * time: 26.536026000976562
-   674     2.314498e-03     5.384923e-03
- * time: 26.57013702392578
-   675     2.314464e-03     2.798608e-02
- * time: 26.592857122421265
-   676     2.314422e-03     4.158942e-02
- * time: 26.633888006210327
-   677     2.314333e-03     1.231897e-02
- * time: 26.675040006637573
-   678     2.314292e-03     3.298698e-02
- * time: 26.70434308052063
-   679     2.314199e-03     2.483289e-02
- * time: 26.733890056610107
-   680     2.314179e-03     2.810767e-02
- * time: 26.75621008872986
-   681     2.314071e-03     1.641122e-03
- * time: 26.80208110809326
-   682     2.314062e-03     8.166967e-03
- * time: 26.83985710144043
-   683     2.314009e-03     2.041006e-02
- * time: 26.874596118927002
-   684     2.313963e-03     3.292254e-02
- * time: 26.8975989818573
-   685     2.313933e-03     8.588487e-03
- * time: 26.937775135040283
-   686     2.313905e-03     2.818535e-02
- * time: 26.977663040161133
-   687     2.313851e-03     2.707025e-02
- * time: 27.017744064331055
-   688     2.313827e-03     1.015234e-02
- * time: 27.04628014564514
-   689     2.313769e-03     2.639273e-02
- * time: 27.085580110549927
-   690     2.313694e-03     3.251116e-02
- * time: 27.114551067352295
-   691     2.313589e-03     6.866760e-03
- * time: 27.154601097106934
-   692     2.313573e-03     1.822394e-03
- * time: 27.17683506011963
-   693     2.313528e-03     2.223855e-02
- * time: 27.20679998397827
-   694     2.313507e-03     1.618992e-02
- * time: 27.247295141220093
-   695     2.313457e-03     3.473664e-02
- * time: 27.287304162979126
-   696     2.313330e-03     3.771207e-02
- * time: 27.328055143356323
-   697     2.313289e-03     3.466085e-02
- * time: 27.356836080551147
-   698     2.313173e-03     3.283575e-02
- * time: 27.378892183303833
-   699     2.313037e-03     4.547514e-03
- * time: 27.438255071640015
-   700     2.312989e-03     1.395134e-02
- * time: 27.49023413658142
-   701     2.312939e-03     3.623537e-02
- * time: 27.519596099853516
-   702     2.312889e-03     3.471772e-02
- * time: 27.55977201461792
-   703     2.312861e-03     1.622709e-02
- * time: 27.582205057144165
-   704     2.312840e-03     3.031196e-02
- * time: 27.622584104537964
-   705     2.312802e-03     3.578754e-02
- * time: 27.662853956222534
-   706     2.312701e-03     7.247638e-04
- * time: 27.703474044799805
-   707     2.312684e-03     1.360066e-02
- * time: 27.73274302482605
-   708     2.312598e-03     1.987099e-02
- * time: 27.761933088302612
-   709     2.312589e-03     2.099165e-02
- * time: 27.784438133239746
-   710     2.312490e-03     1.166400e-02
- * time: 27.842496156692505
-   711     2.312472e-03     2.030835e-02
- * time: 27.864761114120483
-   712     2.312417e-03     1.317171e-02
- * time: 27.89382314682007
-   713     2.312405e-03     2.250275e-02
- * time: 27.935729026794434
-   714     2.312389e-03     3.166580e-04
- * time: 27.964471101760864
-   715     2.312375e-03     1.259427e-02
- * time: 27.99836802482605
-   716     2.312348e-03     3.148870e-02
- * time: 28.038416147232056
-   717     2.312268e-03     1.852803e-02
- * time: 28.07853102684021
-   718     2.312221e-03     2.376841e-02
- * time: 28.11962604522705
-   719     2.312209e-03     4.176521e-03
- * time: 28.151031017303467
-   720     2.312189e-03     1.688823e-02
- * time: 28.192949056625366
-   721     2.312170e-03     2.300649e-02
- * time: 28.23301410675049
-   722     2.312147e-03     1.925999e-03
- * time: 28.272488117218018
-   723     2.312141e-03     1.234725e-02
- * time: 28.301258087158203
-   724     2.312130e-03     8.781385e-03
- * time: 28.3421151638031
-   725     2.312104e-03     7.990216e-03
- * time: 28.3818941116333
-   726     2.312082e-03     1.554586e-02
- * time: 28.43465304374695
-   727     2.312048e-03     3.397835e-03
- * time: 28.46396017074585
-   728     2.312044e-03     1.110027e-02
- * time: 28.48602318763733
-   729     2.312035e-03     1.326678e-02
- * time: 28.52613115310669
-   730     2.311983e-03     3.119157e-03
- * time: 28.58376407623291
-   731     2.311976e-03     8.809820e-03
- * time: 28.605957984924316
-   732     2.311949e-03     1.463271e-02
- * time: 28.63417410850525
-   733     2.311944e-03     5.180708e-03
- * time: 28.67478108406067
-   734     2.311937e-03     1.274945e-02
- * time: 28.714131116867065
-   735     2.311924e-03     2.113723e-02
- * time: 28.75428795814514
-   736     2.311895e-03     1.301692e-02
- * time: 28.794926166534424
-   737     2.311868e-03     1.523547e-02
- * time: 28.849096059799194
-   738     2.311857e-03     7.152376e-03
- * time: 28.931276082992554
-   739     2.311851e-03     1.147272e-03
- * time: 28.989643096923828
-   740     2.311847e-03     4.399568e-03
- * time: 29.011744022369385
-   741     2.311844e-03     1.123342e-02
- * time: 29.040019989013672
-   742     2.311840e-03     1.210984e-02
- * time: 29.079058170318604
-   743     2.311839e-03     1.304284e-02
- * time: 29.10665202140808
-   744     2.311829e-03     7.084084e-03
- * time: 29.144536018371582
-   745     2.311820e-03     9.227440e-03
- * time: 29.189495086669922
-   746     2.311817e-03     1.786009e-03
- * time: 29.211838006973267
-   747     2.311813e-03     5.032308e-03
- * time: 29.240923166275024
-   748     2.311810e-03     8.710806e-03
- * time: 29.2694091796875
-   749     2.311807e-03     2.120184e-03
- * time: 29.310100078582764
-   750     2.311805e-03     3.271301e-03
- * time: 29.332738161087036
-   751     2.311804e-03     1.210071e-03
- * time: 29.37383198738098
-   752     2.311804e-03     2.006880e-03
- * time: 29.416396141052246
-   753     2.311803e-03     2.129960e-03
- * time: 29.446053981781006
-   754     2.311803e-03     7.477153e-04
- * time: 29.486168146133423
-   755     2.311802e-03     1.221657e-03
- * time: 29.525995016098022
-   756     2.311795e-03     6.600514e-03
- * time: 29.576498985290527
-   757     2.311794e-03     5.033533e-03
- * time: 29.627591133117676
-   758     2.311793e-03     3.972823e-03
- * time: 29.656157970428467
-   759     2.311792e-03     1.402663e-03
- * time: 29.68517017364502
-   760     2.311791e-03     7.914981e-04
- * time: 29.707532167434692
-   761     2.311791e-03     3.115506e-03
- * time: 29.748176097869873
-   762     2.311790e-03     3.302610e-04
- * time: 29.78936505317688
-   763     2.311790e-03     4.008806e-04
- * time: 29.831416130065918
-   764     2.311789e-03     2.335350e-04
- * time: 29.860635995864868
-   765     2.311789e-03     2.168260e-03
- * time: 29.89480996131897
-   766     2.311788e-03     1.232236e-03
- * time: 29.96087908744812
-   767     2.311784e-03     2.243429e-04
- * time: 30.00158715248108
-   768     2.311739e-03     9.749867e-03
- * time: 30.04295802116394
-   769     2.311663e-03     4.270617e-03
- * time: 30.072492122650146
-   770     2.311662e-03     8.842901e-03
- * time: 30.09503412246704
-   771     2.311656e-03     6.992635e-03
- * time: 30.124037981033325
-   772     2.311654e-03     2.195846e-02
- * time: 30.164710998535156
-   773     2.311645e-03     2.726384e-03
- * time: 30.206665992736816
-   774     2.311637e-03     4.371851e-03
- * time: 30.24706196784973
-   775     2.311635e-03     6.354520e-03
- * time: 30.275488138198853
-   776     2.311630e-03     9.277017e-03
- * time: 30.297966957092285
-   777     2.311624e-03     7.152869e-03
- * time: 30.338765144348145
-   778     2.311622e-03     1.841224e-02
- * time: 30.395910024642944
-   779     2.311614e-03     7.325376e-03
- * time: 30.532929182052612
-   780     2.311614e-03     5.938422e-03
- * time: 30.56154203414917
-   781     2.311613e-03     9.784675e-04
- * time: 30.58414101600647
-   782     2.311612e-03     1.024141e-03
- * time: 30.624125957489014
-   783     2.311612e-03     2.561123e-04
- * time: 30.66422414779663
-   784     2.311611e-03     7.233256e-03
- * time: 30.73585796356201
-   785     2.311602e-03     5.435954e-04
- * time: 30.78803300857544
-   786     2.311598e-03     4.534738e-03
- * time: 30.817968130111694
-   787     2.311597e-03     2.473411e-03
- * time: 30.847100973129272
-   788     2.311596e-03     7.131803e-04
- * time: 30.88789200782776
-   789     2.311590e-03     4.112466e-03
- * time: 30.94092607498169
-   790     2.311585e-03     7.895475e-03
- * time: 30.96391797065735
-   791     2.311572e-03     4.880218e-03
- * time: 31.00538206100464
-   792     2.311569e-03     1.127550e-03
- * time: 31.03449010848999
-   793     2.311566e-03     1.969542e-04
- * time: 31.065430164337158
-   794     2.311566e-03     1.007400e-03
- * time: 31.090198040008545
-   795     2.311566e-03     1.188656e-03
- * time: 31.132251024246216
-   796     2.311563e-03     3.276048e-04
- * time: 31.17268419265747
-   797     2.311562e-03     4.621896e-03
- * time: 31.215399980545044
-   798     2.311560e-03     3.057031e-03
- * time: 31.245264053344727
-   799     2.311481e-03     4.794567e-04
- * time: 31.308057069778442
-   800     2.311442e-03     2.956352e-02
- * time: 31.34793996810913
-   801     2.311429e-03     1.797436e-02
- * time: 31.377948999404907
-   802     2.311425e-03     6.939688e-03
- * time: 31.408653020858765
-   803     2.311394e-03     4.958734e-03
- * time: 31.451325178146362
-   804     2.311388e-03     7.886596e-04
- * time: 31.505510091781616
-   805     2.311385e-03     5.185649e-03
- * time: 31.534209966659546
-   806     2.311384e-03     1.631358e-04
- * time: 31.557191133499146
-   807     2.311383e-03     5.836798e-03
- * time: 31.660775184631348
-   808     2.311366e-03     1.425919e-05
- * time: 31.71233606338501
-   809     2.311365e-03     9.968521e-04
- * time: 31.80417513847351
-   810     2.311365e-03     1.015178e-05
- * time: 31.845617055892944
-   811     2.311365e-03     5.233924e-04
- * time: 31.968947172164917
-   812     2.311365e-03     1.357403e-05
- * time: 32.009526014328
-   813     2.311364e-03     1.035943e-04
- * time: 32.118810176849365
-   814     2.311364e-03     8.544730e-04
- * time: 32.17229914665222
-   815     2.311364e-03     5.932618e-06
- * time: 32.21443510055542
-   816     2.311364e-03     4.938551e-05
- * time: 32.314414978027344
-   817     2.311362e-03     7.577917e-05
- * time: 32.396178007125854
-   818     2.311362e-03     4.613282e-06
- * time: 32.43745303153992
-   819     2.311362e-03     5.290549e-06
- * time: 32.48984503746033
-   820     2.311362e-03     1.091931e-05
- * time: 32.57240009307861
-   821     2.311362e-03     6.197197e-06
- * time: 32.61211800575256
-   822     2.311360e-03     2.743648e-03
- * time: 32.71133518218994
-   823     2.311344e-03     1.216087e-02
- * time: 32.763381004333496
-   824     2.311336e-03     1.708890e-02
- * time: 32.7926881313324
-   825     2.311317e-03     1.570011e-02
- * time: 32.83425307273865
-   826     2.311316e-03     1.536598e-02
- * time: 32.85756707191467
-   827     2.311311e-03     8.083149e-03
- * time: 32.89052605628967
-   828     2.311304e-03     1.776942e-02
- * time: 32.931286096572876
-   829     2.311282e-03     1.386522e-02
- * time: 32.991671085357666
-   830     2.311247e-03     5.890256e-03
- * time: 33.045865058898926
-   831     2.311243e-03     2.048961e-02
- * time: 33.08588004112244
-   832     2.311229e-03     1.654057e-03
- * time: 33.12605118751526
-   833     2.311221e-03     9.655129e-03
- * time: 33.16600203514099
-   834     2.311216e-03     1.555802e-02
- * time: 33.195271015167236
-   835     2.311202e-03     1.455847e-02
- * time: 33.2361900806427
-   836     2.311202e-03     3.099915e-02
- * time: 33.276735067367554
- 91.779034 seconds (698.46 M allocations: 42.061 GiB, 10.23% gc time)
-(β0, σ0, γ0) = ([-1.6066509465264196, 2.0089865677828476, 2.019757176261076], [1.0, 1.0, 1.0], [0.29677034122546486, 0.3019019698047313])
+julia&gt; @time mpec = estimateBLP(s, x, ν, z, w, z, method=:MPEC,verbose=true);
+(β0, σ0, γ0) = ([-1.6241058717742332, 2.0304512720706374, 2.0319705761775575], [1.0, 1.0, 1.0], [0.3312418108487214, 0.29501363925461427])
 
 ******************************************************************************
 This program contains Ipopt, a library for large-scale nonlinear optimization.
@@ -1788,45 +71,48 @@ Total number of inequality constraints...............:        0
         inequality constraints with only upper bounds:        0
 
 iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-   0  2.2780866e+03 1.59e+00 1.26e+01  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0
-   1  1.2733855e+01 2.02e+00 2.36e+02  -1.0 1.45e+00   0.0 9.46e-01 1.00e+00f  1
-   2  1.2949319e+00 5.03e-01 6.11e+01  -1.0 6.33e-01  -0.5 1.00e+00 1.00e+00f  1
-   3  1.2905039e+00 4.41e-02 5.95e+00  -1.0 1.44e-01  -0.1 1.00e+00 1.00e+00h  1
-   4  6.8940048e-02 2.77e-01 6.03e-01  -1.0 1.21e+00    -  1.00e+00 1.00e+00f  1
-   5  1.8423129e-02 1.06e-02 3.93e-02  -1.7 2.80e-01    -  1.00e+00 1.00e+00h  1
-   6  5.6345228e-03 3.14e-03 7.94e-03  -2.5 1.43e-01    -  1.00e+00 1.00e+00h  1
-   7  3.0892663e-03 9.78e-04 2.15e-03  -3.8 1.01e-01    -  1.00e+00 1.00e+00h  1
-   8  2.6079456e-03 9.25e-04 6.08e-04  -3.8 1.18e-01    -  1.00e+00 1.00e+00h  1
-   9  2.3675034e-03 1.48e-03 1.54e-04  -5.7 1.52e-01    -  9.38e-01 1.00e+00h  1
+   0  2.2683348e+03 1.59e+00 1.25e+01  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0
+   1  1.1627946e+01 2.10e+00 3.00e+02  -1.0 1.41e+00   0.0 9.31e-01 1.00e+00f  1
+   2  8.6041146e-01 6.08e-01 8.16e+01  -1.0 9.72e-01  -0.5 1.00e+00 1.00e+00f  1
+   3  8.8463129e-01 6.87e-02 1.05e+01  -1.0 1.54e-01  -0.1 1.00e+00 1.00e+00h  1
+   4  8.1797276e-01 1.58e-03 4.60e-02  -1.0 5.31e-02  -0.5 1.00e+00 1.00e+00h  1
+   5  2.3802164e-02 3.96e-01 4.83e-01  -2.5 1.10e+00    -  1.00e+00 1.00e+00f  1
+   6  1.3956664e-03 2.38e-02 3.90e-02  -2.5 5.92e-01    -  1.00e+00 1.00e+00h  1
+   7  3.0774811e-03 1.08e-03 8.17e-04  -2.5 1.07e-01    -  1.00e+00 1.00e+00h  1
+   8  1.3920631e-03 1.83e-03 1.16e-03  -3.8 1.10e-01    -  1.00e+00 1.00e+00h  1
+   9  9.6896295e-04 1.23e-03 2.87e-04  -3.8 8.72e-02    -  1.00e+00 1.00e+00h  1
 iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-  10  2.3092079e-03 5.46e-04 1.71e-05  -5.7 9.50e-02    -  1.00e+00 1.00e+00h  1
-  11  2.3130947e-03 1.26e-05 3.55e-07  -5.7 1.33e-02    -  1.00e+00 1.00e+00h  1
-  12  2.3110274e-03 6.11e-07 2.10e-08  -8.6 3.10e-03    -  1.00e+00 1.00e+00h  1
-  13  2.3110085e-03 1.37e-10 3.73e-12  -8.6 4.59e-05    -  1.00e+00 1.00e+00h  1
+  10  9.0794547e-04 7.14e-04 7.00e-05  -5.7 7.19e-02    -  1.00e+00 1.00e+00h  1
+  11  9.7608562e-04 5.59e-05 2.28e-05  -5.7 2.19e-02    -  1.00e+00 1.00e+00h  1
+  12  9.8190513e-04 1.40e-07 1.03e-07  -5.7 1.03e-03    -  1.00e+00 1.00e+00h  1
+  13  9.8189761e-04 1.09e-07 1.08e-08  -8.6 9.06e-04    -  1.00e+00 1.00e+00h  1
+  14  9.8190953e-04 2.44e-12 8.68e-13  -8.6 4.57e-06    -  1.00e+00 1.00e+00h  1
 
-Number of Iterations....: 13
+Number of Iterations....: 14
 
                                    (scaled)                 (unscaled)
-Objective...............:   2.3110084767877714e-03    2.3110084767877714e-03
-Dual infeasibility......:   3.7341293455234702e-12    3.7341293455234702e-12
-Constraint violation....:   1.3702974865914541e-10    1.3702974865914541e-10
-Complementarity.........:   2.5109560167492830e-09    2.5109560167492830e-09
-Overall NLP error.......:   2.5109560167492830e-09    2.5109560167492830e-09
+Objective...............:   9.8190953498880152e-04    9.8190953498880152e-04
+Dual infeasibility......:   8.6810688198432478e-13    8.6810688198432478e-13
+Constraint violation....:   2.4356627825738997e-12    2.4356627825738997e-12
+Complementarity.........:   2.5062103709728661e-09    2.5062103709728661e-09
+Overall NLP error.......:   2.5062103709728661e-09    2.5062103709728661e-09
 
 
-Number of objective function evaluations             = 14
-Number of objective gradient evaluations             = 14
-Number of equality constraint evaluations            = 14
+Number of objective function evaluations             = 15
+Number of objective gradient evaluations             = 15
+Number of equality constraint evaluations            = 15
 Number of inequality constraint evaluations          = 0
-Number of equality constraint Jacobian evaluations   = 14
+Number of equality constraint Jacobian evaluations   = 15
 Number of inequality constraint Jacobian evaluations = 0
-Number of Lagrangian Hessian evaluations             = 13
-Total CPU secs in IPOPT (w/o function evaluations)   =     42.822
-Total CPU secs in NLP function evaluations           =      9.952
+Number of Lagrangian Hessian evaluations             = 14
+Total CPU secs in IPOPT (w/o function evaluations)   =     39.325
+Total CPU secs in NLP function evaluations           =     12.194
 
 EXIT: Optimal Solution Found.
- 79.000612 seconds (62.67 M allocations: 3.459 GiB, 2.57% gc time)
-(β0, σ0, γ0) = ([-1.6066509465264196, 2.0089865677828476, 2.019757176261076], [1.0, 1.0, 1.0], [0.29677034122546486, 0.3019019698047313])
+ 77.062880 seconds (62.54 M allocations: 3.454 GiB, 2.51% gc time)
+
+julia&gt; @time gel = estimateBLP(s, x, ν, z, w, z, method=:GEL,verbose=true);
+(β0, σ0, γ0) = ([-1.6241058717742332, 2.0304512720706374, 2.0319705761775575], [1.0, 1.0, 1.0], [0.3312418108487214, 0.29501363925461427])
 This is Ipopt version 3.12.10, running with linear solver mumps.
 NOTE: Other linear solvers might be more efficient (see Ipopt documentation).
 
@@ -1845,60 +131,66 @@ Total number of inequality constraints...............:        1
         inequality constraints with only upper bounds:        1
 
 iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-   0  4.6051712e+02 1.22e+01 5.80e-02  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0
-   1  4.6205969e+02 1.92e+00 3.40e-01  -1.0 1.92e+00    -  9.84e-01 1.00e+00h  1
-   2  4.6167435e+02 3.23e-01 2.14e+00  -1.0 6.77e-01    -  1.00e+00 1.00e+00h  1
-   3  4.6210642e+02 1.84e-02 5.52e-01  -1.0 1.10e-01    -  1.00e+00 1.00e+00h  1
-   4  4.6213786e+02 6.75e-05 4.24e-02  -1.7 1.03e-02    -  1.00e+00 1.00e+00h  1
-   5  4.6213677e+02 7.65e-07 1.64e-03  -2.5 3.12e-03    -  1.00e+00 1.00e+00h  1
-   6  4.6213641e+02 8.74e-08 7.70e-05  -3.8 1.05e-03    -  1.00e+00 1.00e+00h  1
-   7  4.6213624e+02 4.07e-09 9.58e-07  -5.7 2.23e-04    -  1.00e+00 1.00e+00h  1
-   8  4.6212824e+02 6.31e-08 4.28e-08  -8.6 5.54e-04    -  1.00e+00 1.00e+00h  1
-   9  4.6104490e+02 1.97e-03 6.75e-08  -8.6 1.13e-01    -  1.00e+00 1.00e+00h  1
+   0  4.6051712e+02 1.17e+01 7.06e-02  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0
+   1  4.6178993e+02 1.97e+00 2.30e-01  -1.0 1.78e+00    -  9.90e-01 1.00e+00h  1
+   2  4.6170743e+02 3.43e-01 1.54e+00  -1.0 7.01e-01    -  1.00e+00 1.00e+00h  1
+   3  4.6239778e+02 1.57e-02 1.02e+00  -1.0 2.73e-01    -  1.00e+00 1.00e+00h  1
+   4  4.6243858e+02 3.31e-03 8.08e-02  -1.0 1.67e-01    -  1.00e+00 1.00e+00h  1
+   5  4.6252263e+02 1.68e-05 8.24e-02  -2.5 1.15e-02    -  1.00e+00 1.00e+00h  1
+   6  4.6253102e+02 2.40e-06 7.56e-04  -2.5 2.46e-03  -2.0 1.00e+00 1.00e+00h  1
+   7  4.6253293e+02 3.46e-08 1.10e-04  -3.8 4.65e-04    -  1.00e+00 1.00e+00h  1
+   8  4.6253321e+02 1.14e-09 1.05e-06  -5.7 8.93e-05    -  1.00e+00 1.00e+00h  1
+   9  4.6252108e+02 4.75e-07 2.54e-07  -8.6 1.99e-03    -  1.00e+00 1.00e+00h  1
 iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-  10  4.6104491e+02 7.90e-06 2.63e-10  -8.6 1.07e-02    -  1.00e+00 1.00e+00h  1
-  11  4.6104473e+02 2.61e-08 2.07e-13  -8.6 6.23e-04    -  1.00e+00 1.00e+00h  1
-  12  4.6104473e+02 7.39e-15 2.51e-14  -8.6 2.36e-07    -  1.00e+00 1.00e+00h  1
-  13  4.6085937e+02 3.24e-04 2.32e-08 -12.9 7.28e-02    -  9.47e-01 1.00e+00h  1
-  14  4.6085809e+02 3.22e-04 2.30e-08 -12.9 5.28e-01    -  7.34e-01 1.02e-02h  7
-  15  4.6076608e+02 8.87e-04 1.69e-08 -12.9 3.73e-01    -  8.74e-01 8.85e-01H  1
-  16  4.6075386e+02 2.88e-06 2.83e-10 -12.9 5.97e-03    -  9.92e-01 1.00e+00h  1
-  17  4.6075384e+02 7.85e-11 8.34e-14 -12.9 1.25e-05    -  1.00e+00 1.00e+00h  1
+  10  4.6106975e+02 9.15e-03 1.02e-07  -8.6 2.71e-01    -  1.00e+00 1.00e+00h  1
+  11  4.6096978e+02 1.09e-04 3.95e-09  -8.6 2.65e-02    -  1.00e+00 1.00e+00h  1
+  12  4.6096715e+02 5.63e-07 6.28e-12  -8.6 2.63e-03    -  1.00e+00 1.00e+00h  1
+  13  4.6096715e+02 1.10e-11 2.51e-14  -8.6 1.18e-05    -  1.00e+00 1.00e+00h  1
+  14  4.6069812e+02 1.25e-03 2.86e-08 -12.9 9.01e-02    -  9.59e-01 1.00e+00h  1
+  15  4.6061995e+02 3.68e-04 3.03e-09 -12.9 1.00e-01    -  9.83e-01 1.00e+00H  1
+  16  4.6061779e+02 1.84e-04 2.08e-10 -12.9 3.72e-02    -  1.00e+00 1.00e+00h  1
+  17  4.6061962e+02 6.82e-06 1.40e-11 -12.9 7.91e-03    -  1.00e+00 1.00e+00h  1
+  18  4.6061969e+02 1.01e-08 1.24e-14 -12.9 3.16e-04    -  1.00e+00 1.00e+00h  1
+  19  4.6061969e+02 5.95e-14 1.29e-18 -12.9 7.61e-07    -  1.00e+00 1.00e+00h  1
 
-Number of Iterations....: 17
+Number of Iterations....: 19
 
                                    (scaled)                 (unscaled)
-Objective...............:   4.6075383737282142e-06    4.6075383737282141e+02
-Dual infeasibility......:   8.3354251101561100e-14    8.3354251101561095e-06
-Constraint violation....:   7.8487750803865608e-11    7.8487750803865608e-11
-Complementarity.........:   1.2547676824919832e-13    1.2547676824919832e-05
-Overall NLP error.......:   7.8487750803865608e-11    1.2547676824919832e-05
+Objective...............:   4.6061968598423706e-06    4.6061968598423704e+02
+Dual infeasibility......:   1.2919066443017886e-18    1.2919066443017886e-10
+Constraint violation....:   5.9452442968677133e-14    5.9452442968677133e-14
+Complementarity.........:   1.2544304055624973e-13    1.2544304055624973e-05
+Overall NLP error.......:   1.2544304055624973e-13    1.2544304055624973e-05
 
 
-Number of objective function evaluations             = 28
-Number of objective gradient evaluations             = 18
-Number of equality constraint evaluations            = 28
-Number of inequality constraint evaluations          = 28
-Number of equality constraint Jacobian evaluations   = 18
-Number of inequality constraint Jacobian evaluations = 18
-Number of Lagrangian Hessian evaluations             = 17
-Total CPU secs in IPOPT (w/o function evaluations)   =      0.308
-Total CPU secs in NLP function evaluations           =     11.142
+Number of objective function evaluations             = 21
+Number of objective gradient evaluations             = 20
+Number of equality constraint evaluations            = 21
+Number of inequality constraint evaluations          = 21
+Number of equality constraint Jacobian evaluations   = 20
+Number of inequality constraint Jacobian evaluations = 20
+Number of Lagrangian Hessian evaluations             = 19
+Total CPU secs in IPOPT (w/o function evaluations)   =      0.323
+Total CPU secs in NLP function evaluations           =     14.145
 
 EXIT: Optimal Solution Found.
- 15.802160 seconds (10.07 M allocations: 923.432 MiB, 3.29% gc time)
-┌──────┬──────┬────────┬────────┬────────┐
+ 18.645917 seconds (9.98 M allocations: 921.039 MiB, 2.98% gc time)</code></pre><pre><code class="language-julia">tbl = vcat([&quot;&quot; &quot;True&quot; &quot;NFXP&quot; &quot;MPEC&quot; &quot;GEL&quot;],
+           [(i-&gt;&quot;β[$i]&quot;).(1:length(β)) β nfxp.β mpec.β gel.β],
+           [(i-&gt;&quot;σ[$i]&quot;).(1:length(σ)) σ nfxp.σ mpec.σ gel.σ],
+           [(i-&gt;&quot;γ[$i]&quot;).(1:length(γ)) γ nfxp.γ mpec.γ gel.γ])
+pretty_table(tbl, noheader=true, formatter=ft_printf(&quot;%6.3f&quot;,3:5))</code></pre><pre><code class="language-none">┌──────┬──────┬────────┬────────┬────────┐
 │      │ True │   NFXP │   MPEC │    GEL │
-│ β[1] │ -1.5 │ -1.610 │ -1.610 │ -1.611 │
-│ β[2] │  2.0 │  2.042 │  2.042 │  2.044 │
-│ β[3] │  2.0 │  2.052 │  2.052 │  2.044 │
-│ σ[1] │  0.2 │  0.000 │  0.000 │  0.000 │
-│ σ[2] │  0.2 │  0.300 │  0.300 │  0.375 │
-│ σ[3] │  0.2 │  0.579 │  0.579 │  0.613 │
-│ γ[1] │  0.3 │  0.325 │  0.325 │  0.328 │
-│ γ[2] │  0.3 │  0.272 │  0.272 │  0.286 │
-└──────┴──────┴────────┴────────┴────────┘</code></pre><p>In the absence of optimization error and other numeric problems, <code>:NFXP</code> and <code>:MPEC</code> should produce identical results.  In finite sample, we should expect the GEL estimates to differ. All three methods are consistent, but GEL is also asymptotically efficient (for a fixed choice of <code>z</code>; different <code>z</code> can have large effects on efficiency).</p><h2 id="Inference-1"><a class="docs-heading-anchor" href="#Inference-1">Inference</a><a class="docs-heading-anchor-permalink" href="#Inference-1" title="Permalink"></a></h2><p><a href="../#BLPDemand.varianceBLP-Tuple{Any,Any,Any,AbstractArray{T,2} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T}"><code>varianceBLP</code></a> computes the variance of the estimates produced by either of GMM estimation methods. </p><pre><code class="language-julia">vnfxp = varianceBLP(nfxp.β, nfxp.σ, nfxp.γ, s, x, ν, z, w, z);
-vmpec = varianceBLP(mpec.β, mpec.σ, mpec.γ, s, x, ν, z, w, z);</code></pre><pre><code class="language-none">(Σ = [20.44881463863081 0.07254404836358548 … -0.12251424922503595 -0.1704680391032795; 0.07254401044564178 0.0027202201124542917 … 1.608421167608996e-5 0.00022319484574021602; … ; -0.12251416216297872 1.6084213460830613e-5 … 0.002746247664351446 0.0013377426887556424; -0.17046801678263068 0.00022319440945223415 … 0.0013377436592894034 0.003181178436322697], varm = [0.006811248450671239 0.004597560641332029 … 0.020673537156934013 0.01949267860677094; 0.004597560641332029 0.005358400412483306 … 0.0174970133764097 0.016451431835455933; … ; 0.020673537156934013 0.0174970133764097 … 0.0845228608900407 0.07305659359211804; 0.01949267860677094 0.016451431835455933 … 0.07305659359211804 0.07303611430841095])</code></pre><p>Inference for GEL has not been directly implemented. However, GEL is first order asymptotically equivalent to efficiently weigthed GMM. In other words, GEL estimates have the same asymptotic variance as efficiently weighted GMM. </p><pre><code class="language-julia">v = varianceBLP(gel.β, gel.σ, gel.γ, s, x, ν, z, w, z)
+│ β[1] │ -1.5 │ -1.522 │ -1.527 │ -1.525 │
+│ β[2] │  2.0 │  2.033 │  2.032 │  2.036 │
+│ β[3] │  2.0 │  2.075 │  2.076 │  2.067 │
+│ σ[1] │  0.2 │  0.240 │  0.231 │  0.229 │
+│ σ[2] │  0.2 │  0.193 │  0.172 │  0.138 │
+│ σ[3] │  0.2 │  0.080 │  0.101 │  0.119 │
+│ γ[1] │  0.3 │  0.348 │  0.347 │  0.346 │
+│ γ[2] │  0.3 │  0.331 │  0.332 │  0.326 │
+└──────┴──────┴────────┴────────┴────────┘</code></pre><p>In the absence of optimization error and other numeric problems, <code>:NFXP</code> and <code>:MPEC</code> should produce identical results.  In finite sample, we should expect the GEL estimates to differ. All three methods are consistent, but GEL is also asymptotically efficient (for a fixed choice of <code>z</code>; different <code>z</code> can have large effects on efficiency).</p><h2 id="Inference-1"><a class="docs-heading-anchor" href="#Inference-1">Inference</a><a class="docs-heading-anchor-permalink" href="#Inference-1" title="Permalink"></a></h2><p><a href="../functions/#BLPDemand.varianceBLP-Tuple{Any,Any,Any,AbstractArray{T,2} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T}"><code>varianceBLP</code></a> computes the variance of the estimates produced by either of GMM estimation methods. </p><pre><code class="language-julia">vnfxp = varianceBLP(nfxp.β, nfxp.σ, nfxp.γ, s, x, ν, z, w, z);
+vmpec = varianceBLP(mpec.β, mpec.σ, mpec.γ, s, x, ν, z, w, z);
+nothing</code></pre><p>Inference for GEL has not been directly implemented. However, GEL is first order asymptotically equivalent to efficiently weigthed GMM. In other words, GEL estimates have the same asymptotic variance as efficiently weighted GMM. </p><pre><code class="language-">v = varianceBLP(gel.β, gel.σ, gel.γ, s, x, ν, z, w, z)
 vgel = varianceBLP(gel.β, gel.σ, gel.γ, s, x, ν, z, w,z,W=inv(v.varm))
 
 f(v) = @sprintf(&quot;(%.2f)&quot;, sqrt(v))
@@ -1907,30 +199,66 @@ vtbl = permutedims(hcat(tbl[1,:],
                               [&quot;&quot;, &quot;&quot;, f.([vnfxp.Σ[i,i], vmpec.Σ[i,i], vgel.Σ[i,i]])...])
                          for i in 1:size(vgel.Σ,1)]...
                         ))
-pretty_table(vtbl, noheader=true, formatter=ft_printf(&quot;%6.3f&quot;,3:5))</code></pre><pre><code class="language-none">┌──────┬──────┬────────┬────────┬────────┐
-│      │ True │   NFXP │   MPEC │    GEL │
-│ β[1] │ -1.5 │ -1.610 │ -1.610 │ -1.611 │
-│      │      │ (4.52) │ (4.52) │ (4.86) │
-│ β[2] │  2.0 │  2.042 │  2.042 │  2.044 │
-│      │      │ (0.05) │ (0.05) │ (0.05) │
-│ β[3] │  2.0 │  2.052 │  2.052 │  2.044 │
-│      │      │ (0.21) │ (0.21) │ (0.23) │
-│ σ[1] │  0.2 │  0.000 │  0.000 │  0.000 │
-│      │      │ (9.00) │ (9.01) │ (9.68) │
-│ σ[2] │  0.2 │  0.300 │  0.300 │  0.375 │
-│      │      │ (0.46) │ (0.46) │ (0.42) │
-│ σ[3] │  0.2 │  0.579 │  0.579 │  0.613 │
-│      │      │ (1.28) │ (1.28) │ (1.30) │
-│ γ[1] │  0.3 │  0.325 │  0.325 │  0.328 │
-│      │      │ (0.05) │ (0.05) │ (0.05) │
-│ γ[2] │  0.3 │  0.272 │  0.272 │  0.286 │
-│      │      │ (0.06) │ (0.06) │ (0.06) │
-└──────┴──────┴────────┴────────┴────────┘</code></pre><p>As you can see, these standard errors are suspiciously large. It is possible that there is an error in the code, but I think the problem lies in the functional form of the unconditional instruments.</p><h2 id="Optimal-Instruments-1"><a class="docs-heading-anchor" href="#Optimal-Instruments-1">Optimal Instruments</a><a class="docs-heading-anchor-permalink" href="#Optimal-Instruments-1" title="Permalink"></a></h2><p>The above estimators use the unconditional moment restriction </p><div>\[E[(\xi, \omega) z] =0.\]</div><p>If we assume the conditional moment restriction,</p><div>\[E[(\xi, \omega) | z] =0.\]</div><p>then, we can potentially use any function of <span>$z$</span> to form unconditional moments. </p><div>\[E[(\xi, \omega) f(z)] =0.\]</div><p>The optimal (minimal asymptotic variance) choice of <code>f(z)</code> is </p><div>\[\frac{\partial}{\partial \theta} E[(\xi, \omega) | z] =0.\]</div><p><a href="../#BLPDemand.optimalIV-Tuple{Any,Any,Any,AbstractArray{T,2} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T}"><code>optimalIV</code></a> approximates the optimal instruments by taking as initial estimate of <span>$\theta$</span>, computing <span>$\frac{\partial (\xi, \omega)}{\partial \theta}$</span> for each observation in the data, and then regressing this on a polynomial function of <span>$z$</span>. Using the fitted values from this regression as <span>$f(z)$</span> results in much more precise estimates of <span>$\theta$</span>. </p><pre><code class="language-">zd,zs=optimalIV(mpec.β, mpec.σ, mpec.γ, s, x, ν, z, w)
-@time nfxp = estimateBLP(s, x, ν, zd, w, zs, method=:NFXP, verbose=true);
-@time mpec = estimateBLP(s, x, ν, zd, w, zs, method=:MPEC,verbose=true);
-@time gel = estimateBLP(s, x, ν, zd, w, zs, method=:GEL,verbose=true);
+pretty_table(vtbl, noheader=true, formatter=ft_printf(&quot;%6.3f&quot;,3:5))</code></pre><p>As you can see, these standard errors are suspiciously large. It is possible that there is an error in the code, but I think the problem lies in the functional form of the unconditional instruments.</p><h2 id="Optimal-Instruments-1"><a class="docs-heading-anchor" href="#Optimal-Instruments-1">Optimal Instruments</a><a class="docs-heading-anchor-permalink" href="#Optimal-Instruments-1" title="Permalink"></a></h2><p>The above estimators use the unconditional moment restriction </p><div>\[E[(\xi, \omega) z] =0.\]</div><p>If we assume the conditional moment restriction,</p><div>\[E[(\xi, \omega) | z] =0.\]</div><p>then, we can potentially use any function of <span>$z$</span> to form unconditional moments. </p><div>\[E[(\xi, \omega) f(z)] =0.\]</div><p>The optimal (minimal asymptotic variance) choice of <code>f(z)</code> is </p><div>\[\frac{\partial}{\partial \theta} E[(\xi, \omega) | z] =0.\]</div><p><a href="../functions/#BLPDemand.optimalIV-Tuple{Any,Any,Any,AbstractArray{T,2} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T}"><code>optimalIV</code></a> approximates the optimal instruments by taking as initial estimate of <span>$\theta$</span>, computing <span>$\frac{\partial (\xi, \omega)}{\partial \theta}$</span> for each observation in the data, and then regressing this on a polynomial function of <span>$z$</span>. Using the fitted values from this regression as <span>$f(z)$</span> results in much more precise estimates of <span>$\theta$</span>. </p><pre><code class="language-julia">zd,zs=optimalIV(gel.β, max.(gel.σ, 0.1), # calculating optimal IV with σ near 0 gives poor peformance
+                gel.γ, s, x, ν, z, w);</code></pre><pre><code class="language-none">([-68.0560194189544 -53.213994250088675 … -64.31739702526247 -45.93532670285054; -25.327320955295722 -7.224868539565861 … -27.72482384878188 -12.8400059559575; … ; 3.199726773723171 -3.2830973608383354 … 1.7965297369640747 0.02457626952850922; 4.7355372917117435 -4.936111419660533 … 4.229040185384223 -1.57363981264342]
 
-vnfxp = varianceBLP(nfxp.β, nfxp.σ, nfxp.γ, s, x, ν, zd, w, zs)
+[-73.61534736825482 -45.099994517134476 … -34.15185508633271 -66.09794355263024; -26.24583338696424 -8.866888900994187 … -24.86546837145967 -6.90722556048993; … ; 6.810256161950495 -4.622779400502586 … 3.6909582760291055 -2.5015860555384326; 0.8846541227224147 -4.964467740937796 … 2.701810475963977 -1.030317153547895]
+
+[-59.130611410566786 -52.099872125908924 … -44.2932109566022 -63.77067980728442; -6.453203516838547 -20.734828636063135 … -14.977529934412841 -12.197780026225526; … ; -0.8530647485831684 -5.257500801625107 … 0.5416117079300975 0.9158296410497704; 0.7353630332166231 -3.7071915135049944 … 4.848711700794665 -2.2333850882854307]
+
+...
+
+[-56.66988857265632 -52.929741974580644 … -35.33122797146517 -49.643911943466904; -13.298507767324175 -1.330518487822002 … -20.982063926983987 -13.493645039778393; … ; 0.5669881331235322 -2.5406719104685247 … 0.784413076189419 -0.11152969074068342; 6.825522465913943 -1.565673267392349 … 3.698003435511816 -0.4027241317055875]
+
+[-71.02225355867041 -68.61550107489126 … -50.214686124028084 -53.423164403617214; -7.556485598263586 -20.38922299335888 … -16.885030535569527 -10.326388266352923; … ; 11.017977375826755 -3.0892243328586355 … 7.447189772504646 -2.1901050685367203; 4.0271195226311045 -3.255926598880595 … 3.013409308568953 -1.660180757408428]
+
+[-71.458826980559 -52.94081267220811 … -35.65403396081607 -49.6630457160784; -10.559186204518006 -10.196327116305461 … 1.0374850695573592 -23.76641902154651; … ; 5.581126874107099 -1.5409589993220427 … 1.9907581858091705 0.4808991974519664; 3.223591065793022 -3.294082078585572 … -2.0670013857558676 3.704240148327788], [8.039437968999964 0.7025155017356421 … -1.3015774513539644 -15.490945576979287; 6.068813072349735 7.48976284156981 … 2.8727901110602097 -0.4078121033987834; … ; -13.013807232878126 -21.51355234370337 … -16.127526028701894 -7.1368905283724455; -16.4193395499255 -34.93075960244527 … -20.36086523224158 -16.110583485369766]
+
+[13.59393395373527 -8.497267068284483 … -8.756043168009702 -13.28230284004297; 6.558710715062329 7.869617766329391 … 1.8336434746880421 -0.03170985712749763; … ; -33.682532370613686 -38.97850894000126 … 0.4844468365405641 -29.238475410898086; -5.105790939494874 -18.52336662187186 … -18.68462940418182 -20.269342624472564]
+
+[7.074493304613981 -9.588192544906663 … -6.029668158777522 -12.882047112508191; 3.088657724983894 0.19668947618262944 … -0.5490896465576999 -1.314369228927763; … ; -7.85598112609585 -3.4633458205359307 … -19.415561402100273 -25.730376294972498; -0.40344761890247405 -11.445014335359193 … -17.29348122072763 -23.43077870266976]
+
+...
+
+[6.352527288520118 -7.066688515866885 … -10.734874108149178 -13.889778852781408; 4.798771687805901 3.558569156266643 … 1.167846139034765 0.6594832321401487; … ; -5.1623836684290865 -8.670964388031123 … -8.41322479329953 -10.429553349415361; -23.47201788087426 -26.396083723543804 … -14.384394527105641 -2.5473077361641216]
+
+[11.869674434879206 2.1421654571201705 … -8.502900469682125 -15.57861497539317; 3.2242126343645423 0.9977309148580833 … -0.508951953001163 -0.9570856201716678; … ; -39.69672596397087 -43.124731940183224 … -17.508637841883928 -17.63247102434542; -14.10331942512731 -28.942387523976407 … -8.783989563446642 -11.546835979304275]
+
+[12.222596420057485 -4.538816753131332 … -6.604573572569695 -23.027646590841357; 4.868589270512837 -2.01838524974779 … 0.2554647631026882 -3.3196469692035433; … ; -28.733880266093806 -13.736133749347731 … -6.393588622047334 -12.61681971158174; -26.679420111788005 -8.98682963766533 … -17.366152237982348 -5.73465377088586])</code></pre><pre><code class="language-julia-repl">julia&gt; @time nfxp = estimateBLP(s, x, ν, zd, w, zs, method=:NFXP, verbose=false)
+(β0, σ0, γ0) = ([-1.624446204235393, 2.0245967384282144, 2.0409255610203707], [1.0, 1.0, 1.0], [0.331334213492675, 0.2951017041780987])
+objectiveBLP(θ0) = 412039.1029762008
+ 43.492252 seconds (379.39 M allocations: 23.334 GiB, 20.63% gc time)
+(β = [-1.550013396407868, 2.069112226236655, 2.084252921136983], σ = [0.19255189805537454, 0.18643668896400598, 0.17265643080385717], γ = [0.32582864685581414, 0.3083329400432833], ξ = [-0.19458190668345965 -0.2387603116308109 … 0.09510951100181475 0.4007677677711161; 0.40403060454937734 -0.09904907920557626 … 0.05846254971198395 -0.09775894580778238; … ; -0.08121381930737925 -0.2781442922793267 … 0.18377323395134054 0.3850295987363057; 0.23789260108711702 0.04841756043829237 … -0.17231612027409593 -0.018023913198102648], ω = [0.16106086123112148 0.2504062658255782 … 0.008518065095932503 0.023327679330821083; -0.1807093781444521 -0.47854837864082633 … 0.13893940049139364 0.062196768920732615; … ; 0.3362177535010809 -0.1134972858677348 … -0.11063011636385814 -0.22738249776526764; -0.028244229839406748 0.1560175699253642 … 0.1807710758474032 -0.1685909549762451], opt =  * Status: success
+
+ * Candidate solution
+    Minimizer: [-1.55e+00, 2.07e+00, 2.08e+00,  ...]
+    Minimum:   1.383954e-14
+
+ * Found with
+    Algorithm:     L-BFGS
+    Initial Point: [-1.62e+00, 2.02e+00, 2.04e+00,  ...]
+
+ * Convergence measures
+    |x - x&#39;|               = 0.00e+00 ≤ 0.0e+00
+    |x - x&#39;|/|x&#39;|          = 0.00e+00 ≤ 0.0e+00
+    |f(x) - f(x&#39;)|         = 0.00e+00 ≤ 0.0e+00
+    |f(x) - f(x&#39;)|/|f(x&#39;)| = 0.00e+00 ≤ 0.0e+00
+    |g(x)|                 = 5.60e-05 ≰ 1.0e-08
+
+ * Work counters
+    Seconds run:   43  (vs limit Inf)
+    Iterations:    528
+    f(x) calls:    1554
+    ∇f(x) calls:   1554
+)
+
+julia&gt; @time mpec = estimateBLP(s, x, ν, zd, w, zs, method=:MPEC,verbose=false);
+(β0, σ0, γ0) = ([-1.624446204235393, 2.0245967384282144, 2.0409255610203707], [1.0, 1.0, 1.0], [0.331334213492675, 0.2951017041780987])
+ 39.931780 seconds (15.60 M allocations: 1.141 GiB, 0.76% gc time)
+
+julia&gt; @time gel = estimateBLP(s, x, ν, zd, w, zs, method=:GEL,verbose=false);
+(β0, σ0, γ0) = ([-1.624446204235393, 2.0245967384282144, 2.0409255610203707], [1.0, 1.0, 1.0], [0.331334213492675, 0.2951017041780987])
+ 11.482750 seconds (3.73 M allocations: 607.205 MiB, 1.79% gc time)</code></pre><pre><code class="language-julia">vnfxp = varianceBLP(nfxp.β, nfxp.σ, nfxp.γ, s, x, ν, zd, w, zs)
 vmpec = varianceBLP(mpec.β, mpec.σ, mpec.γ, s, x, ν, zd, w, zs)
 v = varianceBLP(gel.β, gel.σ, gel.γ, s, x, ν, zd, w, zs)
 vgel = varianceBLP(gel.β, gel.σ, gel.γ, s, x, ν, zd, w,zs,W=inv(v.varm))
@@ -1945,4 +273,22 @@ vtbl = permutedims(hcat(tbl[1,:],
                               [&quot;&quot;, &quot;&quot;, f.([vnfxp.Σ[i,i], vmpec.Σ[i,i], vgel.Σ[i,i]])...])
                          for i in 1:size(vgel.Σ,1)]...
                         ))
-pretty_table(vtbl, noheader=true, formatter=ft_printf(&quot;%6.3f&quot;,3:5))</code></pre><p>We see that with the optimal instruments all three methods produce essentially the same results (in this case, theoretically, NFXP=MPEC, and both are asymptotically equivalent to GEL, so this is expected). Moreover, the estimates are now much more precise and quite close to the true parameter values.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 5 February 2020 02:26">Wednesday 5 February 2020</span>. Using Julia version 1.3.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+pretty_table(vtbl, noheader=true, formatter=ft_printf(&quot;%6.3f&quot;,3:5))</code></pre><pre><code class="language-none">┌──────┬──────┬────────┬────────┬────────┐
+│      │ True │   NFXP │   MPEC │    GEL │
+│ β[1] │ -1.5 │ -1.550 │ -1.550 │ -1.550 │
+│      │      │ (0.04) │ (0.04) │ (0.04) │
+│ β[2] │  2.0 │  2.069 │  2.069 │  2.069 │
+│      │      │ (0.03) │ (0.03) │ (0.03) │
+│ β[3] │  2.0 │  2.084 │  2.084 │  2.084 │
+│      │      │ (0.03) │ (0.03) │ (0.03) │
+│ σ[1] │  0.2 │  0.193 │  0.193 │  0.193 │
+│      │      │ (0.08) │ (0.08) │ (0.08) │
+│ σ[2] │  0.2 │  0.186 │  0.186 │  0.186 │
+│      │      │ (0.08) │ (0.08) │ (0.08) │
+│ σ[3] │  0.2 │  0.173 │  0.173 │  0.173 │
+│      │      │ (0.06) │ (0.06) │ (0.06) │
+│ γ[1] │  0.3 │  0.326 │  0.326 │  0.326 │
+│      │      │ (0.02) │ (0.02) │ (0.02) │
+│ γ[2] │  0.3 │  0.308 │  0.308 │  0.308 │
+│      │      │ (0.02) │ (0.02) │ (0.02) │
+└──────┴──────┴────────┴────────┴────────┘</code></pre><p>We see that with the optimal instruments all three methods produce essentially the same results (in this case, theoretically, NFXP=MPEC, and both are asymptotically equivalent to GEL, so this is expected). Moreover, the estimates are now much more precise and quite close to the true parameter values.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../functions/">Function Reference »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 5 February 2020 22:19">Wednesday 5 February 2020</span>. Using Julia version 1.3.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
