@@ -26,7 +26,7 @@ in tastes for characteristics. Let
 ```
 Then we can write shares as
 ```math
-s[j,t] = \int \frac{\exp(\delta[j,t] + x[:,j,t]'(\nu .* \sigma)}{1 + \sum_{\ell} \exp(\delta[\ell,t]' + x[:,\ell,t]'*\nu .* \sigma)} dF_\nu
+s[j,t] = \int \frac{\exp(\delta[j,t] + x[:,j,t]'(\nu .* \sigma)}{1 + \sum_{\ell} \exp(\delta[\ell,t] + x[:,\ell,t]'*\nu .* \sigma)} dF_\nu
 ```
 the right hand side of this equation is computed by 
 [`share(δ, σ, x,ν)`](@ref). 

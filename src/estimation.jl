@@ -35,6 +35,23 @@ function demandmoments(β::AbstractVector,σ::AbstractVector,
   return((moments=moments, ξ=ξ))
 end
 
+function demandmoments(β::AbstractVector,σ::AbstractVector,
+                       dat::BLPData)
+  T = length(dat)
+  M = size(dat[1].zd,1)
+  ξtype = promote_type(eltype(dat[1].x), eltype(β))
+  ξ = Array{Array{ξtype, 1}, 1}(undef,T)
+  moments = zeros(ξtype, M)
+  JT = 0
+  for t in 1:T
+    ξ[t] = delta(dat[t].s, dat[t].x, dat[t].ν, σ) - dat[t].x'*β
+    JT += length(ξ[t])
+    moments .+= dat[t].zd*ξ[t]
+  end
+  moments /= JT
+
+  return(moments=moments, ξ=ξ)
+end
 
 function safelog(x)
   δ = 1e-8
@@ -77,8 +94,7 @@ Returns `(moments, ω)` an `L` vector of moments with `moments[l] = 1/(JT) ∑�
 """
 function supplymoments(γ::AbstractVector, β::AbstractVector, σ::AbstractVector,
                        ξ::AbstractMatrix, x, ν, w, ivsupply;
-                       firmid= (1:size(ξ,1)) .* fill(1, size(ξ,2))',
-                       endogenousx=1)
+                       firmid= (1:size(ξ,1)) .* fill(1, size(ξ,2))')
   J, T = size(ξ)
   K = length(β)
   # pre-allocate arrays
@@ -100,6 +116,30 @@ function supplymoments(γ::AbstractVector, β::AbstractVector, σ::AbstractVecto
   end
   return((moments=moments, ω=ω))
 end
+
+function supplymoments(γ::AbstractVector, β::AbstractVector, σ::AbstractVector,
+                       ξ::AbstractVector, dat::BLPData)
+  T = length(ξ)
+  K = length(β)
+  M = size(dat[1].zs,1)
+  # pre-allocate arrays
+  ωtype = promote_type(eltype(ξ[1]), eltype(γ))
+  ω = Array{Vector{ωtype},1}(undef, T)
+  moments = zeros(ωtype,M)
+  JT = 0
+  for t in 1:T
+    @views p = dat[t].x[1,:]
+    @views s, Js, Λ, Γ = dsharedp(β, σ, p, dat[t].x[2:end,:], dat[t].ν, ξ[t])
+    Js .= Js .* (dat[t].firmid.==dat[t].firmid')
+    mc = p + Js \ s
+    @views ω[t] = safelog.(mc) .- dat[t].w'*γ
+    moments .+= dat[t].zs*ω[t]
+    JT += length(ω[t])
+  end
+  moments ./= JT
+  return((moments=moments, ω=ω))
+end
+
 
 
 """
@@ -192,7 +232,7 @@ Estimates a random coefficients IV logit model.
 - `verbose` whether to display information about optimization progress
 """
 function estimateRCIVlogit(s, x, ν, iv; method=:MPEC, verbose=true, W=I)
-    
+
   K, J, T = size(x)
   L = size(iv, 1)
   σ0 = ones(K)
@@ -251,6 +291,139 @@ function estimateRCIVlogit(s, x, ν, iv; method=:MPEC, verbose=true, W=I)
   return(out)    
 end
 
+function estimateRCIVlogit(dat::BLPData; method=:MPEC, verbose=true, W=I)
+  
+  T = length(dat)
+  K = size(dat[1].x,1)
+  σ0 = ones(K)
+
+  # initial β from logit
+  Y = vcat((d->(log.(d.s) .- log(1 .- sum(d.s)))).(dat)...)
+  X = hcat( (d->d.x).(dat)...)
+  Z = hcat( (d->d.zd).(dat)...)
+  xz=((Z*Z') \ Z*X')'*Z
+  β0 = (xz*xz') \ xz*Y
+
+  # initial γ
+  γ0 = zeros(size(dat[1].w, 1))
+  m, ξ = demandmoments(β0, 0*σ0, dat)
+  m, ω = supplymoments(γ0, β0, 0*σ0, ξ, dat)
+  Y = vcat(ω...)
+  X = hcat((d->d.w).(dat)...)
+  γ0 = X' \ Y  
+  @show β0, σ0, γ0
+  
+  if method==:NFXP
+    θ0, unpack = pack(β0, σ0, γ0)
+    objectiveBLP = 
+      function(θ)
+        β, σ = unpack(θ)
+        m, ξ = demandmoments(β,σ, dat)
+        return(T*m'*W*m)
+      end    
+    @show objectiveBLP(θ0)
+    opt = optimize(objectiveBLP, θ0, method=LBFGS(),show_trace=verbose, autodiff=:forward)
+    β, σ = unpack(opt.minimizer)
+    m, ξ = demandmoments(β,σ, dat)
+    out = (β=β, σ=σ, ξ=ξ, opt=opt)
+  elseif method==:MPEC
+    mod = Model()
+    K = size(dat[1].x,1)
+    Kw = size(dat[1].w,1)
+    @variable(mod, β[1:K])
+    @variable(mod, σ[1:K] ≥ 0)
+    info = VariableInfo(false, NaN, false, NaN, false, NaN, false, NaN, false, false)
+    ξ = Vector{Vector{JuMP.variable_type(mod)}}(undef, T)
+    JT = 0
+    for t in 1:T
+      J = length(dat[t].s)
+      JT += J
+      S = size(dat[t].ν,2)
+      ξ[t] = Vector{JuMP.variable_type(mod)}(undef,J)
+      for j in 1:J
+        ξ[t][j] = JuMP.add_variable(mod, build_variable(error, info), "ξ[$t][$j]")
+      end
+      njit = @NLexpression(mod, [j in 1:J, i in 1:S], #exp(δi[j,i,t]))
+                           exp(sum(dat[t].x[k,j]*β[k] for k in 1:K) + ξ[t][j] +
+                               sum(σ[k]*dat[t].ν[k, i]*dat[t].x[k,j] for k in 1:K)))
+      dit = @NLexpression(mod, [i in 1:S], 1 + sum(njit[j,i] for j in 1:J))
+      sjit = @NLexpression(mod, [j in 1:J, i in 1:S], njit[j,i]/dit[i])
+      @NLconstraint(mod, [j in 1:J], dat[t].s[j] == sum(sjit[j,i] for i in 1:S)/S)
+    end
+    
+    Md = size(dat[1].zd,1)
+    @expression(mod, moments[m in 1:Md],
+                sum( (ξ[t][j]*dat[t].zd[m, j]) for t in 1:T, j in 1:size(dat[t].zd,2))/JT)
+    @objective(mod, Min, T*moments'*W*moments);
+    set_start_value.(mod[:β], β0)
+    set_start_value.(mod[:σ], σ0)
+    # start from a feasible point
+    for t in 1:T
+      ξt = delta(dat[t].s, dat[t].x, dat[t].ν, start_value.(mod[:σ])) - dat[t].x'*start_value.(mod[:β])
+      set_start_value.(ξ[t], ξt)
+    end
+    set_optimizer(mod,  with_optimizer(Ipopt.Optimizer,
+                                       print_level=5*verbose,
+                                       max_iter=1000))
+    optimize!(mod)
+    out = (β=value.(mod[:β]), σ=value.(mod[:σ]), 
+           ξ=nothing, opt=mod)
+  elseif method==:GEL
+    mod = Model()
+    K = size(dat[1].x,1)
+    @variable(mod, β[1:K])
+    @variable(mod, σ[1:K] ≥ 0)
+    info = VariableInfo(false, NaN, false, NaN, false, NaN, false, NaN, false, false)
+    ξ = Vector{Vector{JuMP.variable_type(mod)}}(undef, T)
+    JT = 0
+    for t in 1:T
+      J = length(dat[t].s)
+      JT += J
+      S = size(dat[t].ν,2)
+      ξ[t] = Vector{JuMP.variable_type(mod)}(undef,J)
+      for j in 1:J
+        ξ[t][j] = JuMP.add_variable(mod, build_variable(error, info), "ξ[$t][$j]")
+      end
+      njit = @NLexpression(mod, [j in 1:J, i in 1:S], #exp(δi[j,i,t]))
+                           exp(sum(dat[t].x[k,j]*β[k] for k in 1:K) + ξ[t][j] +
+                               sum(σ[k]*dat[t].ν[k, i]*dat[t].x[k,j] for k in 1:K)))
+      dit = @NLexpression(mod, [i in 1:S], 1 + sum(njit[j,i] for j in 1:J))
+      sjit = @NLexpression(mod, [j in 1:J, i in 1:S], njit[j,i]/dit[i])
+      @NLconstraint(mod, [j in 1:J], dat[t].s[j] == sum(sjit[j,i] for i in 1:S)/S)
+    end
+    
+    Md = size(dat[1].zd,1)
+    @expression(mod, md[m in 1:Md],
+                sum( (ξ[t][j]*dat[t].zd[m, j]) for t in 1:T, j in 1:size(dat[t].zd,2))/JT)
+    @variable(mod, p[1:T] ≥ 0)
+    M = Md
+    @constraint(mod, moments[m in 1:M],
+                0 == sum(p[t]*sum(ξ[t][j]*dat[t].zd[m,j] 
+                                  for j in 1:size(dat[t].zd,2))
+                         for t in 1:T))
+    @NLobjective(mod, Max, sum(log(p[t]) for t in 1:T))
+    @constraint(mod, sum(p[t] for t in 1:T) <= 1)    
+        set_start_value.(mod[:β], β0)
+    set_start_value.(mod[:σ], σ0)
+    set_start_value.(mod[:p], 1/T)
+    # start from a feasible point
+    for t in 1:T
+      ξt = delta(dat[t].s, dat[t].x, dat[t].ν, start_value.(mod[:σ])) - dat[t].x'*start_value.(mod[:β])
+      set_start_value.(ξ[t], ξt)
+    end
+    
+    set_optimizer(mod,  with_optimizer(Ipopt.Optimizer,
+                                       print_level=5*verbose,
+                                       max_iter=1000))
+    optimize!(mod)
+    out = (β=value.(mod[:β]), σ=value.(mod[:σ]), 
+           ξ=nothing, p=value.(mod[:p]), opt=mod)
+  else
+    error("method $method not recognized")
+  end
+  return(out)    
+end
+
 
 
 
@@ -288,7 +461,7 @@ function estimateBLP(s::AbstractMatrix, #p::AbstractMatrix,
                      ivdemand::AbstractArray{T,3} where T,
                      w::AbstractArray{T, 3} where T, ivsupply::AbstractArray{T, 3} where T;
                      method=:MPEC, verbose=true, firmid=1:size(s,1), W=I)
-
+  
   smalls = 1e-4
   if (minimum(s) < smalls)
     @warn "There are $(sum(s .< smalls)) shares < $smalls."
@@ -445,6 +618,192 @@ function estimateBLP(s::AbstractMatrix, #p::AbstractMatrix,
 end
 
 
+function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I)
+  smalls = 1e-4
+  if (minimum((d->minimum(d.s)).(dat)) < smalls)
+    @warn "There are $(sum(s .< smalls)) shares < $smalls."
+    @warn "Estimation may encounter numeric problems with small shares."
+  end
+  if (maximum((d->maximum(d.s)).(dat)) > 1.0 - smalls)
+    @warn "There are $(sum(s .> 1.0 - smalls)) shares > 1 - $smalls."
+    @warn "Estimation may encounter numeric problems with shares near 1."
+  end
+
+  T = length(dat)
+  K = size(dat[1].x,1)
+  σ0 = ones(K)
+
+  # initial β from logit
+  Y = vcat((d->(log.(d.s) .- log(1 .- sum(d.s)))).(dat)...)
+  X = hcat( (d->d.x).(dat)...)
+  Z = hcat( (d->d.zd).(dat)...)
+  xz=((Z*Z') \ Z*X')'*Z
+  β0 = (xz*xz') \ xz*Y
+
+  # initial γ
+  γ0 = zeros(size(dat[1].w, 1))
+  m, ξ = demandmoments(β0, 0*σ0, dat)
+  m, ω = supplymoments(γ0, β0, 0*σ0, ξ, dat)
+  Y = vcat(ω...)
+  X = hcat((d->d.w).(dat)...)
+  γ0 = X' \ Y  
+  @show β0, σ0, γ0
+  
+  if method==:NFXP
+    θ0, unpack = pack(β0, σ0, γ0)
+    objectiveBLP = 
+      function(θ)
+        β, σ, γ = unpack(θ)
+        md, ξ = demandmoments(β,σ, dat)
+        ms, ω = supplymoments(γ, β, σ, ξ, dat)
+        m = md[:] + ms[:]
+        return(T*m'*W*m)
+      end    
+    @show objectiveBLP(θ0)
+    opt = optimize(objectiveBLP, θ0, method=LBFGS(),show_trace=verbose, autodiff=:forward)
+    β, σ, γ = unpack(opt.minimizer)
+    m, ξ = demandmoments(β,σ, dat)
+    m, ω = supplymoments(γ, β, σ, ξ, dat)
+    out = (β=β, σ=σ, γ=γ, ξ=ξ, ω=ω, opt=opt)
+  elseif method==:MPEC
+    mod = Model()
+    K = size(dat[1].x,1)
+    Kw = size(dat[1].w,1)
+    @variable(mod, β[1:K])
+    @variable(mod, σ[1:K] ≥ 0)
+    @variable(mod, γ[1:Kw])
+    info = VariableInfo(false, NaN, false, NaN, false, NaN, false, NaN, false, false)
+    ξ = Vector{Vector{JuMP.variable_type(mod)}}(undef, T)
+    ω = Vector{Vector{JuMP.variable_type(mod)}}(undef, T)
+    JT = 0
+    for t in 1:T
+      J = length(dat[t].s)
+      JT += J
+      S = size(dat[t].ν,2)
+      ξ[t] = Vector{JuMP.variable_type(mod)}(undef,J)
+      ω[t] = Vector{JuMP.variable_type(mod)}(undef,J)
+      for j in 1:J
+        ξ[t][j] = JuMP.add_variable(mod, build_variable(error, info), "ξ[$t][$j]")
+        ω[t][j] = JuMP.add_variable(mod, build_variable(error, info), "ω[$t][$j]")
+      end
+      njit = @NLexpression(mod, [j in 1:J, i in 1:S], #exp(δi[j,i,t]))
+                           exp(sum(dat[t].x[k,j]*β[k] for k in 1:K) + ξ[t][j] +
+                               sum(σ[k]*dat[t].ν[k, i]*dat[t].x[k,j] for k in 1:K)))
+      dit = @NLexpression(mod, [i in 1:S], 1 + sum(njit[j,i] for j in 1:J))
+      sjit = @NLexpression(mod, [j in 1:J, i in 1:S], njit[j,i]/dit[i])
+      @NLconstraint(mod, [j in 1:J], dat[t].s[j] == sum(sjit[j,i] for i in 1:S)/S)
+      Λ = @NLexpression(mod, [j in 1:J], sum(sjit[j,i]*(β[1]+σ[1]*dat[t].ν[1,i]) for i in 1:S)/S)
+      Γ = @NLexpression(mod, [j in 1:J, jj in 1:J],
+                        (dat[t].firmid[j]==dat[t].firmid[jj])*
+                        sum(sjit[j,i]*sjit[jj,i]*(β[1]+σ[1]*dat[t].ν[1,i]) for i in 1:S)/S)
+      mc = @NLexpression(mod, [j in 1:J], exp(ω[t][j] + sum(dat[t].w[l,j]*γ[l] for l in 1:Kw)))
+      @NLconstraint(mod, [j in 1:J], 0 == dat[t].s[j]/Λ[j] + 
+                    dat[t].x[1,j]-mc[j] - sum( (dat[t].x[1,jj] - mc[jj])*Γ[j,jj]/Λ[jj]
+                                               for jj in findall(dat[t].firmid[j].==dat[t].firmid)) )
+    end
+    
+    Md = size(dat[1].zd,1)
+    @expression(mod, md[m in 1:Md],
+                sum( (ξ[t][j]*dat[t].zd[m, j]) for t in 1:T, j in 1:size(dat[t].zd,2))/JT)
+    Ms=size(dat[1].zs,1)
+    @expression(mod, ms[m in 1:Ms],
+                sum(ω[t][j]*dat[t].zs[m,j] for t in 1:T, j in 1:size(dat[t].zs,2))/JT)
+    @assert Md==Ms
+    M = Md #+ Ms
+    @expression(mod, moments[m in 1:M], md[m] + ms[m]) #m <= Md ? md[m] : ms[m-Md])
+    @objective(mod, Min, T*moments'*W*moments);
+    set_start_value.(mod[:β], β0)
+    set_start_value.(mod[:σ], σ0)
+    set_start_value.(mod[:γ], 0)
+    # start from a feasible point
+    for t in 1:T
+      ξt = delta(dat[t].s, dat[t].x, dat[t].ν, start_value.(mod[:σ])) - dat[t].x'*start_value.(mod[:β])
+      set_start_value.(ξ[t], ξt)
+      set_start_value.(ω[t],0)
+    end
+    
+    set_optimizer(mod,  with_optimizer(Ipopt.Optimizer,
+                                       print_level=5*verbose,
+                                       max_iter=1000))
+    optimize!(mod)
+    out = (β=value.(mod[:β]), σ=value.(mod[:σ]), γ=value.(mod[:γ]),
+           ξ=nothing, ω=nothing, opt=mod)
+  elseif method==:GEL
+    mod = Model()
+    K = size(dat[1].x,1)
+    Kw = size(dat[1].w,1)
+    @variable(mod, β[1:K])
+    @variable(mod, σ[1:K] ≥ 0)
+    @variable(mod, γ[1:Kw])
+    info = VariableInfo(false, NaN, false, NaN, false, NaN, false, NaN, false, false)
+    ξ = Vector{Vector{JuMP.variable_type(mod)}}(undef, T)
+    ω = Vector{Vector{JuMP.variable_type(mod)}}(undef, T)
+    JT = 0
+    for t in 1:T
+      J = length(dat[t].s)
+      JT += J
+      S = size(dat[t].ν,2)
+      ξ[t] = Vector{JuMP.variable_type(mod)}(undef,J)
+      ω[t] = Vector{JuMP.variable_type(mod)}(undef,J)
+      for j in 1:J
+        ξ[t][j] = JuMP.add_variable(mod, build_variable(error, info), "ξ[$t][$j]")
+        ω[t][j] = JuMP.add_variable(mod, build_variable(error, info), "ω[$t][$j]")
+      end
+      njit = @NLexpression(mod, [j in 1:J, i in 1:S], #exp(δi[j,i,t]))
+                           exp(sum(dat[t].x[k,j]*β[k] for k in 1:K) + ξ[t][j] +
+                               sum(σ[k]*dat[t].ν[k, i]*dat[t].x[k,j] for k in 1:K)))
+      dit = @NLexpression(mod, [i in 1:S], 1 + sum(njit[j,i] for j in 1:J))
+      sjit = @NLexpression(mod, [j in 1:J, i in 1:S], njit[j,i]/dit[i])
+      @NLconstraint(mod, [j in 1:J], dat[t].s[j] == sum(sjit[j,i] for i in 1:S)/S)
+      Λ = @NLexpression(mod, [j in 1:J], sum(sjit[j,i]*(β[1]+σ[1]*dat[t].ν[1,i]) for i in 1:S)/S)
+      Γ = @NLexpression(mod, [j in 1:J, jj in 1:J],
+                        (dat[t].firmid[j]==dat[t].firmid[jj])*
+                        sum(sjit[j,i]*sjit[jj,i]*(β[1]+σ[1]*dat[t].ν[1,i]) for i in 1:S)/S)
+      mc = @NLexpression(mod, [j in 1:J], exp(ω[t][j] + sum(dat[t].w[l,j]*γ[l] for l in 1:Kw)))
+      @NLconstraint(mod, [j in 1:J], 0 == dat[t].s[j]/Λ[j] + 
+                    dat[t].x[1,j]-mc[j] - sum( (dat[t].x[1,jj] - mc[jj])*Γ[j,jj]/Λ[jj]
+                                               for jj in findall(dat[t].firmid[j].==dat[t].firmid)) )
+    end
+    
+    Md = size(dat[1].zd,1)
+    @expression(mod, md[m in 1:Md],
+                sum( (ξ[t][j]*dat[t].zd[m, j]) for t in 1:T, j in 1:size(dat[t].zd,2))/JT)
+    Ms=size(dat[1].zs,1)
+    @expression(mod, ms[m in 1:Ms],
+                sum(ω[t][j]*dat[t].zs[m,j] for t in 1:T, j in 1:size(dat[t].zs,2))/JT)
+    @assert Md==Ms
+    @variable(mod, p[1:T] ≥ 0)
+    M = Ms
+    @constraint(mod, moments[m in 1:M],
+                0 == sum(p[t]*sum(ξ[t][j]*dat[t].zd[m,j] + ω[t][j].*dat[t].zs[m,j]
+                                  for j in 1:size(dat[t].zd,2))
+                         for t in 1:T))
+    @NLobjective(mod, Max, sum(log(p[t]) for t in 1:T))
+    @constraint(mod, sum(p[t] for t in 1:T) <= 1)    
+        set_start_value.(mod[:β], β0)
+    set_start_value.(mod[:σ], σ0)
+    set_start_value.(mod[:γ], 0)
+    set_start_value.(mod[:p], 1/T)
+    # start from a feasible point
+    for t in 1:T
+      ξt = delta(dat[t].s, dat[t].x, dat[t].ν, start_value.(mod[:σ])) - dat[t].x'*start_value.(mod[:β])
+      set_start_value.(ξ[t], ξt)
+      set_start_value.(ω[t],0)
+    end
+    
+    set_optimizer(mod,  with_optimizer(Ipopt.Optimizer,
+                                       print_level=5*verbose,
+                                       max_iter=1000))
+    optimize!(mod)
+    out = (β=value.(mod[:β]), σ=value.(mod[:σ]), γ=value.(mod[:γ]),
+           ξ=nothing, ω=nothing, p=value.(mod[:p]), opt=mod)
+  else
+    error("method $method not recognized")
+  end
+  return(out)    
+end
+
+
 function varianceRCIVlogit(β, σ, s::AbstractMatrix,
                            x::AbstractArray{T, 3} where T, ν::AbstractArray{T,3} where T,
                            ivdemand::AbstractArray{T,3} where T ;
@@ -519,6 +878,46 @@ function varianceBLP(β, σ, γ, s::AbstractMatrix,
   Σ = Ju'*inv(D'*W*D)*(D'*W*V*W*D)*inv(D'*W*D)*Ju/T
   return(Σ=Σ, varm=V)
 end
+
+"""
+   varianceBLP(β, σ, γ, s::AbstractMatrix,
+                     x::AbstractArray{T, 3} where T, ν::AbstractArray{T,3} where T,
+                     ivdemand::AbstractArray{T,3} where T,
+                     w::AbstractArray{T, 3} where T, ivsupply::AbstractArray{T, 3} where T;
+                     firmid=1:size(s,1), W=I)  
+
+Computes variance of BLP estimates. Computes moment variance clustering on `t`. 
+
+Returns `Σ` = covariance of `[β, σ, γ]` and `varm` = (clustered) covariance of moments.  
+"""
+function varianceBLP(β, σ, γ, dat::BLPData ; W=I)  
+  md, ξ = demandmoments(β,σ, dat)
+  ms, ω = supplymoments(γ, β, σ, ξ, dat)
+
+  T = length(dat)
+  Md = size(dat[1].zd,1)
+  Ms = size(dat[1].zs,1)  
+  mi = zeros(eltype(ξ[1]), Md, T)
+  @assert Md==Ms
+  for t in 1:T
+    for l in 1:Ms
+      mi[l, t] = sum(ξ[t].*dat[t].zd[l,:] .+ ω[t].*dat[t].zs[l,:])/length(ξ[t])
+    end
+  end
+  V = cov(mi, dims=2)
+  θ, unpack = pack(β,σ,γ)
+  G = function(θ)
+    β, σ, γ = unpack(θ)
+    md, ξ = demandmoments(β,σ, dat)
+    ms, ω = supplymoments(γ, β, σ, ξ, dat)
+    md[:] + ms[:]
+  end
+  D = ForwardDiff.jacobian(G, θ)
+  Ju = ForwardDiff.jacobian(θ->vcat(unpack(θ)...), θ)
+  Σ = Ju'*inv(D'*W*D)*(D'*W*V*W*D)*inv(D'*W*D)*Ju/T
+  return(Σ=Σ, varm=V)
+end
+
 
 """
 
@@ -626,4 +1025,36 @@ function optimalIV(β,σ, γ,
     end
   end
   return((zd, zs))
+end
+
+function optimalIV(β,σ, γ, 
+                   dat::BLPData; degree=2)
+  θ, unpack = pack(β,σ, γ)
+  ei = function(θ)
+    β, σ, γ = unpack(θ)
+    md, ξ = demandmoments(β,σ, dat)
+    ms, ω = supplymoments(γ, β, σ, ξ, dat)
+    hcat(vcat(ξ...), vcat(ω...))
+  end
+  e = ei(θ)
+  Ω = cov(e, dims=1)
+  Di = reshape(ForwardDiff.jacobian(ei, θ), size(e)..., length(θ))
+  Y = zeros(size(e,1), size(e,2)*length(θ))
+  for jt in 1:size(Di,1)
+    Y[jt,:] .= (inv(Ω)*Di[jt,:,:])[:]
+  end
+  Z = hcat((d->[d.zd; d.zs]).(dat)...)'
+  zstar = polyreg(Z,Z,Y, degree=degree)
+  out = deepcopy(dat)
+  jt = 0
+  for t in 1:length(dat)
+    J = length(dat[t].s)
+    M = size(zstar,2)÷2
+    out[t].zd .= zstar[jt .+ (1:J), 1:M]'
+    out[t].zs .= zstar[jt .+ (1:J), (M+1):end]'
+    jt += J
+  end
+  @assert jt==size(zstar,1)
+  @assert zstar ≈ hcat((d->[d.zd; d.zs]).(out)...)'
+  return(out)
 end

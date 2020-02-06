@@ -12,7 +12,7 @@ using Statistics: cov
 #import StatsModels
 
 export 
-  data_blp,
+  data_blp1999,
   share,
   sharep, dsharedp,
   delta,
@@ -26,7 +26,9 @@ export
   makeivblp,
   estimateBLP,
   varianceBLP,
-  optimalIV
+  optimalIV,
+  MarketData,
+  BLPData
 
 
 include("data.jl")

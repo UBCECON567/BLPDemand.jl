@@ -12,13 +12,7 @@ Simulates a random coefficients logit model with endogeneity.
 - `ρ::Number` strength of endogeneity
 - `S` number of simulation draws to calculate market shares
 
-# Returns
-
-- `x` array of product characteristics with `size(x) = (K, J, T)`
-- `z` array of instruments with `size(z) = (L, J, T)`
-- `s` matrix of market shares `size(s) = (J,T)`
-- `ν` random draws used to compute market shares, `size(ν) = (K,S,T)`
-- `ξ` market demand shocks, `size(ξ) = (J,T)`
+Returns [`BLPData`](@ref) struct
 """
 function simulateIVRClogit(T, β, σ, π, ρ, S; varξ=1)  
   (niv, nchar, J) = size(π)
@@ -34,8 +28,8 @@ function simulateIVRClogit(T, β, σ, π, ρ, S; varξ=1)
   s = zeros(J,T)
   for t in 1:T
     @views s[:,t] .= share(x[:,:,t]'*β+ξ[:,t], σ, x[:,:,t], ν[:,:,t])
-  end
-  return((x=x, z=z, s=s, ν=ν, ξ=ξ))
+  end  
+  return(BLPdata(s, x, ν, z))
 end
 
 
@@ -67,7 +61,7 @@ https://www.jstor.org/stable/23013173).
 function eqprices(mc::AbstractVector,
                   β::AbstractVector, σ::AbstractVector,
                   ξ::AbstractVector,
-                  x, ν;
+                  x::AbstractMatrix, ν::AbstractMatrix;
                   firmid= 1:length(mc),
                   tol=sqrt(eps(eltype(mc))),
                   maxiter=10000, verbose=false)
@@ -109,13 +103,10 @@ Simulates a BLP demand and supply model.
 - `γ::AbstractVector` marginal cost coefficients
 - `S` number of simulation draws to calculate market shares
 
-# Returns
-
-- `x` array of product characteristics with `size(x) = (K, J, T)`
-- `z` array of instruments with `size(z) = (L, J, T)`
-- `s` matrix of market shares `size(s) = (J,T)`
-- `ν` random draws used to compute market shares, `size(ν) = (K,S,T)`. `log(-ν[1,:,:])` is N(0,1) the other components of ν are N(0,1). It is important that β[1] + σ[1]*ν[1,:,:] is negative.
-- `ξ` market demand shocks, `size(ξ) = (J,T)`
+# Returns 
+- `dat` a [`BLPData`](@ref) struct
+- `ξ`
+- `ω`
 """
 function simulateBLP(J, T, β::AbstractVector, σ::AbstractVector, γ::AbstractVector, S;
                      varξ=1, varω=1)
@@ -139,8 +130,9 @@ function simulateBLP(J, T, β::AbstractVector, σ::AbstractVector, γ::AbstractV
     s[:,t] .= share(x[:,:,t]'*β+ξ[:,t], σ, x[:,:,t], ν[:,:,t])
   end
 
+  z = makeivblp(cat(x[2:end,:,:],w), dims=1)
   
-  return((x=x, w=w, p=p, s=s, ν=ν, ξ=ξ, ω=ω))
+  return(dat=BLPData(s, x, ν, z, w, z), ξ=ξ, ω=ω)
   
 end
 
