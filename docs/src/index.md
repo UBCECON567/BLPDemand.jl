@@ -51,7 +51,7 @@ For the supply side of the model, we assume that `x[1,:,:]` is
 price. Marginal costs are log linear and firms choose prices in
 Bertrand-Nash competition, so (for single product firms)
 ```math
-(p[j,t] - exp(w[:,j,t]'\gamma + \omega[j,t])) \frac{\partial
+(p[j,t] - \exp(w[:,j,t]'\gamma + \omega[j,t])) \frac{\partial
 s}{\partial x[1,:,:]} + s[j,t] = 0
 ```
 
