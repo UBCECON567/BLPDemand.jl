@@ -1,6 +1,6 @@
 module BLPDemand
 
-import DataFrames
+using DataFrames: DataFrame
 import CSV
 import ForwardDiff
 import NLsolve

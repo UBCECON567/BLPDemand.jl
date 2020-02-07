@@ -1,5 +1,5 @@
 using Revise
-using BLPDemand, Test, ForwardDiff, FiniteDiff
+using BLPDemand, Test, ForwardDiff, FiniteDiff, LinearAlgebra
 
 @testset "share and delta" begin
   K = 3
@@ -67,20 +67,15 @@ end
   
   sim = simulateIVRClogit(T, β, σ, π0, ρ, S)
 
-  dat = BLPData(sim.s, sim.x, sim.ν, sim.z, sim.z, sim.z)
-
-  @time m0 = demandmoments(β, σ, sim.s, sim.x, sim.ν, sim.z).moments
-  @time m1 = demandmoments(β, σ, dat).moments
-
-  @test m0 ≈ m1
+  @time m0 = demandmoments(β, σ, sim).moments
   
 
   # this test will fail with approximate probability 1 - cdf(Normal(),3)^(J*size(π,1)) ≈ 0.01
   @test isapprox(m0, zeros(eltype(m0), size(m0)), atol= 6/sqrt(T))
 
   # test that moving away from true parameters increases moments
-  @test sum(demandmoments(β.+1.0, σ, sim.s, sim.x, sim.ν, sim.z).moments.^2) > sum(m0.^2)
-  @test sum(demandmoments(β, σ.+1.0, sim.s, sim.x, sim.ν, sim.z).moments.^2) > sum(m0.^2)
+  @test sum(demandmoments(β.+1.0, σ, sim).moments.^2) > sum(m0.^2)
+  @test sum(demandmoments(β, σ.+1.0, sim).moments.^2) > sum(m0.^2)
   
 end
 
@@ -130,73 +125,63 @@ end
   β[1] = -1.0
   σ[1] = 0.1
 
-  sim = simulateBLP(J,T, β, σ, γ, S);
+  sim, ξ, ω = simulateBLP(J,T, β, σ, γ, S)
 
-
-  @test m0 ≈ m1
 
   # check demand moments again
-  m0 = demandmoments(β, σ, sim.s, sim.x, sim.ν, sim.w).moments;
+  m0 = demandmoments(β, σ, sim).moments;
 
   # this test will fail with approximate probability 1 - cdf(Normal(),3)^(J*size(π,1)) ≈ 0.01
   @test isapprox(m0, zeros(eltype(m0), size(m0)), atol= 3/sqrt(T))
   # test that moving away from true parameters increases moments
-  @test sum(demandmoments(β.+1.0, σ, sim.s, sim.x, sim.ν, sim.w).moments.^2) > sum(m0.^2)
-  @test sum(demandmoments(β, σ.+1.0, sim.s, sim.x, sim.ν, sim.w).moments.^2) > sum(m0.^2)
+  @test sum(demandmoments(β.+1.0, σ, sim).moments.^2) > sum(m0.^2)
+  @test sum(demandmoments(β, σ.+1.0, sim).moments.^2) > sum(m0.^2)
 
-  iv = sim.w
-  ms = supplymoments(γ, β, σ, sim.ξ, sim.x, sim.ν, sim.w, iv).moments
+  ms = supplymoments(γ, β, σ, ξ, sim).moments
 
   # Check that supply moments using correct ω
-  for k in 1:size(sim.w,1)
-    @test isapprox(ms[k], sum(sim.ω.*iv[k,:,:])/length(sim.ω),
-                   rtol=eps(eltype(sim.ω))^(0.35))
+  for k in 1:size(sim[1].w,1)
+    @test isapprox(ms[k], sum([dot(ω[t], sim[t].zs[k,:])/J for t in 1:T])/T,
+                   rtol=eps(eltype(ω[1]))^(0.35))
   end
   
-  dat = BLPData(sim.s, sim.x, sim.ν, sim.w, sim.w, iv)
-  ξt = Vector{Vector{Float64}}(undef, T)
-  for t in 1:T
-    ξt[t] = sim.ξ[:,t]
-  end
-  @time ms1 = supplymoments(γ, β, σ, ξt, dat).moments
-  @test ms1 ≈ ms
   
   # test that moving away from true parameters increases moments
-  @test sum(supplymoments(γ.+1.0, β, σ, sim.ξ, sim.x, sim.ν, sim.w, iv).moments.^2) > sum(ms.^2)
+  @test sum(supplymoments(γ.+1.0, β, σ, ξ, sim).moments.^2) > sum(ms.^2)
  
 end
 
 @testset "estimate RC IV logit" begin
 
   K = 3
-  J = 5
+  J = 2
   S = 20
-  T = 100
-  β = ones(K)*0.2
+  T = 200
+  β = [1, -1, 1]
   σ = ones(K)*0.2
   ρ = 0.8
   π0 = zeros(2K,K,J)
   for k in 1:K
     π0[k,k,:] .= 1
-    π0[K+k,k, :] .= 1
+    π0[K+k,k, :] .= -1
   end
   
-  sim = simulateIVRClogit(T, β, σ, π0, ρ, S, varξ=0.2)
+  sim = simulateIVRClogit(T, β, σ, π0, ρ, S, varξ=0.2);
 
-  @time nfxp = estimateRCIVlogit(sim.s, sim.x, sim.ν, sim.z, method=:NFXP, verbose=true)
-  @time mpec = estimateRCIVlogit(sim.s, sim.x, sim.ν, sim.z, method=:MPEC, verbose=true)
-
+  @time nfxp = estimateRCIVlogit(sim, method=:NFXP, verbose=true)
+  @time mpec = estimateRCIVlogit(sim, method=:MPEC, verbose=true)
+  
   @test isapprox(nfxp.β, mpec.β, rtol=eps(Float64)^(1/4))
   @test isapprox(nfxp.σ, mpec.σ, rtol=eps(Float64)^(1/4))
-  @test isapprox(nfxp.ξ, mpec.ξ, rtol=eps(Float64)^(1/4))
 
+  
 end
 
 @testset "estimate BLP" begin
 
   K = 3
   J = 5
-  S = 20
+  S = 5
   T = 100
   β = ones(K)*2
   β[1] = -1.5
@@ -204,38 +189,39 @@ end
   #σ[1] = 0.0
   γ = ones(2)*0.3
   
-  sim = simulateBLP(J,T, β, σ, γ, S, varξ=0.2, varω=0.2);
-  z = makeivblp(cat(sim.x[2:end,:,:], sim.w, dims=1));
-  dat = BLPData(sim.s, sim.x, sim.ν, z, sim.w, z);
-  
+  sim, ξ, ω = simulateBLP(J,T, β, σ, γ, S, varξ=0.2, varω=0.2);
 
   
-  @time nfxp = estimateBLP(sim.s, sim.x, sim.ν, z, sim.w, z, method=:NFXP, verbose=true)
-  @time n2 = estimateBLP(dat, method=:NFXP, verbose=true)
-  
-  @time mpec = estimateBLP(sim.s, sim.x, sim.ν, z, sim.w, z, method=:MPEC, verbose=true)
-  @time m2 = estimateBLP(dat, method=:MPEC, verbose=true)
+  @time nfxp = estimateBLP(sim, method=:NFXP, verbose=true)
+  @time mpec = estimateBLP(sim, method=:MPEC, verbose=true)
+  @time gel = estimateBLP(sim,  method=:GEL, verbose=true)
 
   @test isapprox(nfxp.β, mpec.β, rtol=eps(Float64)^(1/4))
   @test isapprox(nfxp.σ, mpec.σ, rtol=eps(Float64)^(1/4))
   @test isapprox(nfxp.γ, mpec.γ, rtol=eps(Float64)^(1/4))  
-  @test isapprox(nfxp.ξ, mpec.ξ, rtol=eps(Float64)^(1/4))
-  @test isapprox(nfxp.ω, mpec.ω, rtol=eps(Float64)^(1/4))
 
-  var = varianceBLP(mpec.β, mpec.σ, mpec.γ, sim.s, sim.x, sim.ν, z, sim.w, z)
-  v2 = varianceBLP(mpec.β, mpec.σ, mpec.γ, dat)
+  @test isapprox(gel.β, mpec.β, rtol=eps(Float64)^(1/4))
+  @test isapprox(gel.σ, mpec.σ, rtol=eps(Float64)^(1/4))
+  @test isapprox(gel.γ, mpec.γ, rtol=eps(Float64)^(1/4))  
 
-  @test v2.Σ ≈ var.Σ
+  v = varianceBLP(mpec.β, mpec.σ, mpec.γ, sim)
+
+  simo=optimalIV(nfxp.β, max.(nfxp.σ, 0.1), nfxp.γ, sim);
   
-  zd,zs=optimalIV(β, σ, γ, sim.s, sim.x, sim.ν, z, sim.w)
+  @time no = estimateBLP(simo, method=:NFXP, verbose=true)
+  @time mo = estimateBLP(simo, method=:MPEC, verbose=true)
+  @time go = estimateBLP(simo, method=:GEL, verbose=true)
 
-  @time oiv = estimateBLP(sim.s, sim.x, sim.ν, zd, sim.w, zs, method=:MPEC, verbose=true)
-  vopt = varianceBLP(oiv.β, oiv.σ, oiv.γ, sim.s, sim.x, sim.ν, zd, sim.w, zs)
-  
-  @time gel = estimateBLP(sim.s, sim.x, sim.ν, zd, sim.w, zs, method=:GEL, verbose=true)
-  @time g2 = estimateBLP(dat, method=:GEL, verbose=true)
+  @test isapprox(no.β, mo.β, rtol=eps(Float64)^(1/4))
+  @test isapprox(no.σ, mo.σ, rtol=eps(Float64)^(1/4))
+  @test isapprox(no.γ, mo.γ, rtol=eps(Float64)^(1/4))  
 
-  odat = optimalIV(β,σ,γ, dat)
+  @test isapprox(go.β, mo.β, rtol=eps(Float64)^(1/4))
+  @test isapprox(go.σ, mo.σ, rtol=eps(Float64)^(1/4))
+  @test isapprox(go.γ, mo.γ, rtol=eps(Float64)^(1/4))  
+
+  vo = varianceBLP(no.β, no.σ, no.γ, simo)
+
   
 end
 

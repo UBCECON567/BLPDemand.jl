@@ -29,7 +29,7 @@ function simulateIVRClogit(T, β, σ, π, ρ, S; varξ=1)
   for t in 1:T
     @views s[:,t] .= share(x[:,:,t]'*β+ξ[:,t], σ, x[:,:,t], ν[:,:,t])
   end  
-  return(BLPdata(s, x, ν, z))
+  return(BLPData(s, x, ν, z))
 end
 
 
@@ -91,12 +91,13 @@ function eqprices(mc::AbstractVector,
 end
 
 """
-    function simulateBLP(T, β, σ, γ, S)  
+    function simulateBLP(J, T, β, σ, γ, S)  
 
 Simulates a BLP demand and supply model.
 
 # Arguments
 
+- `J` numebr of products
 - `T::Integer` number of markets
 - `β::AbstractVector` with `length(β)=K`, average tastes for characteristics. The first characteristic will be endogeneous (price)
 - `σ::AbstractVector` with `length(σ)=K`, standard deviation of tastes for characteristics
@@ -130,9 +131,9 @@ function simulateBLP(J, T, β::AbstractVector, σ::AbstractVector, γ::AbstractV
     s[:,t] .= share(x[:,:,t]'*β+ξ[:,t], σ, x[:,:,t], ν[:,:,t])
   end
 
-  z = makeivblp(cat(x[2:end,:,:],w), dims=1)
+  z = makeivblp(cat(x[2:end,:,:],w, dims=1))
   
-  return(dat=BLPData(s, x, ν, z, w, z), ξ=ξ, ω=ω)
+  return(dat=BLPData(s, x, ν, z, w, z), ξ=[ξ[:,t] for t in 1:T], ω=[ω[:,t] for t in 1:T])
   
 end
 

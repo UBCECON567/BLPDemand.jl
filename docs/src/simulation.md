@@ -18,8 +18,8 @@ T = 100           # number of markets
 γ = ones(2)*0.3
 Random.seed!(984256)
 
-(x, w, p, s, ν, ξ, ω) = simulateBLP(J,T, β, σ, γ, S, varξ=0.2, varω=0.2)
-@show quantile(s[:], [0, 0.05, 0.5, 0.95, 1])
+(sim, ξ, ω) = simulateBLP(J,T, β, σ, γ, S, varξ=0.2, varω=0.2)
+@show quantile(vcat((d->d.s[:]).(sim)...), [0, 0.05, 0.5, 0.95, 1])
 ```
 
 Estimation will encounter numerical difficulties if market shares are very
@@ -27,20 +27,15 @@ close (within 1e-4) to 0 or 1. The above range should be fine.
 
 ## Instruments
 
-In the simulated data `x[2:end,:,:]` and `w` are uncorrelated with `ξ`
-and `ω`, but price, `x[1,:,:]`, is endogenous. The price of the `j`th
+In the simulated data `sim[].x[2:end,:]` and `sim[].w` are uncorrelated with `ξ`
+and `ω`, but price, `sim[].x[1,:]`, is endogenous. The price of the `j`th
 firm will depend on the characteristics and costs of all other goods,
 so these are available as instruments. [`makeivblp`](@ref) is a
 convenience function that constructs the sum of all other firms'
 exogenous variables to use as instruments. This is similar to what
 Berry, Levinsohn, and Pakes (1995) do. We will see below though that
 much more accurate estimates can be obtained by using the optimal
-instruments. 
-
-```@example sim
-z = makeivblp(cat(x[2:end,:,:], w, dims=1));
-size(z)
-```
+instruments. `makeivblp` is used by `simulateBLP` to generate `sim[].zd` and `sim[].zs`.
 
 ## Estimation
 
@@ -49,9 +44,9 @@ GMM with nested-fixed point (`:NFXP`), constrained GMM (`:MPEC`), and
 constrained GEL (`:GEL`). See [`estimateBLP`](@ref). 
 
 ```@repl sim
-@time nfxp = estimateBLP(s, x, ν, z, w, z, method=:NFXP, verbose=false)
-@time mpec = estimateBLP(s, x, ν, z, w, z, method=:MPEC,verbose=true);
-@time gel = estimateBLP(s, x, ν, z, w, z, method=:GEL,verbose=true);
+@time nfxp = estimateBLP(sim, method=:NFXP, verbose=false)
+@time mpec = estimateBLP(sim, method=:MPEC,verbose=true);
+@time gel = estimateBLP(sim, method=:GEL,verbose=true);
 ```
 
 ```@example sim
@@ -76,11 +71,10 @@ effects on efficiency).
 by either of GMM estimation methods. 
 
 ```@example sim
-vnfxp = varianceBLP(nfxp.β, nfxp.σ, nfxp.γ, s, x, ν, z, w, z);
-vmpec = varianceBLP(mpec.β, mpec.σ, mpec.γ, s, x, ν, z, w, z);
+vnfxp = varianceBLP(nfxp.β, nfxp.σ, nfxp.γ, sim);
+vmpec = varianceBLP(mpec.β, mpec.σ, mpec.γ, sim);
 nothing
 ```
-
 
 Inference for GEL has not been directly implemented. However, GEL is
 first order asymptotically equivalent to efficiently weigthed GMM. In
@@ -88,8 +82,8 @@ other words, GEL estimates have the same asymptotic variance as
 efficiently weighted GMM. 
 
 ```@example sim
-v = varianceBLP(gel.β, gel.σ, gel.γ, s, x, ν, z, w, z)
-vgel = varianceBLP(gel.β, gel.σ, gel.γ, s, x, ν, z, w,z,W=inv(v.varm))
+v = varianceBLP(gel.β, gel.σ, gel.γ, sim)
+vgel = varianceBLP(gel.β, gel.σ, gel.γ, sim)
 
 f(v) = @sprintf("(%.2f)", sqrt(v))
 vtbl = permutedims(hcat(tbl[1,:],
@@ -133,22 +127,22 @@ values from this regression as ``f(z)`` results in much more precise
 estimates of ``\theta``. 
 
 ```@example sim
-zd,zs=optimalIV(gel.β, max.(gel.σ, 0.1), # calculating optimal IV with σ near 0 gives poor peformance
-                gel.γ, s, x, ν, z, w);
+sim=optimalIV(gel.β, max.(gel.σ, 0.1), # calculating optimal IV with σ near 0 gives poor peformance
+              gel.γ, sim);
 nothing
 ```
 
 ```@repl sim
-@time nfxp = estimateBLP(s, x, ν, zd, w, zs, method=:NFXP, verbose=false)
-@time mpec = estimateBLP(s, x, ν, zd, w, zs, method=:MPEC,verbose=false);
-@time gel = estimateBLP(s, x, ν, zd, w, zs, method=:GEL,verbose=false);
+@time nfxp = estimateBLP(sim, method=:NFXP, verbose=false)
+@time mpec = estimateBLP(sim, method=:MPEC,verbose=false);
+@time gel = estimateBLP(sim, method=:GEL,verbose=false);
 ```
 
 ```@example sim
-vnfxp = varianceBLP(nfxp.β, nfxp.σ, nfxp.γ, s, x, ν, zd, w, zs)
-vmpec = varianceBLP(mpec.β, mpec.σ, mpec.γ, s, x, ν, zd, w, zs)
-v = varianceBLP(gel.β, gel.σ, gel.γ, s, x, ν, zd, w, zs)
-vgel = varianceBLP(gel.β, gel.σ, gel.γ, s, x, ν, zd, w,zs,W=inv(v.varm))
+vnfxp = varianceBLP(nfxp.β, nfxp.σ, nfxp.γ, sim)
+vmpec = varianceBLP(mpec.β, mpec.σ, mpec.γ, sim)
+v = varianceBLP(gel.β, gel.σ, gel.γ, sim)
+vgel = varianceBLP(gel.β, gel.σ, gel.γ, sim, W=inv(v.varm))
 
 f(v) = @sprintf("(%.2f)", sqrt(v))
 tbl = vcat(["" "True" "NFXP" "MPEC" "GEL"],
@@ -175,40 +169,49 @@ Using [`share`](@ref) and the `ForwardDiff.jl` package, we can
 calculate elasticities of demand with respect to each characteristic.
 
 ```@example sim
-function elasticity(β, σ, γ, x, ν, ξ)
-  K,J,T = size(x)
-  e = zeros(typeof(x[:,1,1]'*β+ξ[1,1]),J,K,J,T)
+function elasticity(β, σ, γ, dat, ξ)
+  T = length(dat)
+  K,J = size(dat[1].x)
+  etype = typeof(dat[1].x[:,1]'*β+ξ[1][1])
+  e = Array{Array{etype,3},1}(undef, T)
   for t in 1:T
-    @views xt = x[:,:,t]
-    st(x) = share(x'*β + ξ[:,t], σ, x, ν[:,:,t])
+    @views xt = dat[t].x
+    st(x) = share(x'*β + ξ[t], σ, x, dat[t].ν)
     ∂s = reshape(ForwardDiff.jacobian(st, xt), J, K, J)
     s = st(xt)
+    e[t] = zeros(etype, J,K,J)
     for k in 1:K
       for j in 1:J
-        e[:,k,j,t] .= ∂s[:,k,j]./s .* xt[k,j]
+        e[t][:,k,j] .= ∂s[:,k,j]./s .* xt[k,j]
       end
     end
   end
   return e
 end
 
-function avg_price_elasticity(β,σ,γ)
-  ξ = similar(β, J, T)
+function avg_price_elasticity(β,σ,γ, dat)
+  ξ = Vector{Vector{eltype(β)}}(undef, T)
   for t in 1:T
-    ξ[:,t] .= delta(s[:,t], x[:,:,t], ν[:,:,t], σ) - x[:,:,t]'*β
+    ξ[t] = delta(dat[t].s, dat[t].x, dat[t].ν, σ) - dat[t].x'*β
   end
-  e=elasticity(β,σ,γ,x,ν,ξ)
-  dropdims(mean(e[:,1,:,:], dims=3), dims=3)
+  e=elasticity(β,σ,γ,dat,ξ)
+  avge = zeros(eltype(e[1]),size(e[1]))
+  # this assumes J is the same for all markets
+  for t in 1:T
+    avge .+= e[t]
+  end
+  avge /= T
+  avge[:,1,:]
 end
 
-price_elasticity = avg_price_elasticity(gel.β, gel.σ, gel.γ)
+price_elasticity = avg_price_elasticity(gel.β, gel.σ, gel.γ, sim)
 ```
 
 Standard errors of elasticities and other quantities calculated from
 estimates can be calculated using the delta method.
 
 ```@example sim
-D = ForwardDiff.jacobian(θ->avg_price_elasticity(θ[1:K], θ[(K+1):(2K)], θ[(2K+1):end]), [gel.β;gel.σ;gel.γ])
+D = ForwardDiff.jacobian(θ->avg_price_elasticity(θ[1:K], θ[(K+1):(2K)], θ[(2K+1):end], dat), [gel.β;gel.σ;gel.γ])
 V = D*vgel.Σ*D'
 se = reshape(sqrt.(diag(V)), size(price_elasticity))
 
