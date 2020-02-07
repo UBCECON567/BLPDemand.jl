@@ -10,42 +10,41 @@ T = 100           # number of markets
 γ = ones(2)*0.3
 Random.seed!(984256)
 
-(x, w, p, s, ν, ξ, ω) = simulateBLP(J,T, β, σ, γ, S, varξ=0.2, varω=0.2)
-@show quantile(s[:], [0, 0.05, 0.5, 0.95, 1])</code></pre><pre><code class="language-none">5-element Array{Float64,1}:
+(sim, ξ, ω) = simulateBLP(J,T, β, σ, γ, S, varξ=0.2, varω=0.2)
+@show quantile(vcat((d-&gt;d.s[:]).(sim)...), [0, 0.05, 0.5, 0.95, 1])</code></pre><pre><code class="language-none">5-element Array{Float64,1}:
  0.005595325130689362
  0.025308344384962846
  0.1045923937513262  
  0.28923521521004586 
- 0.429307860081008   </code></pre><p>Estimation will encounter numerical difficulties if market shares are very close (within 1e-4) to 0 or 1. The above range should be fine. </p><h2 id="Instruments-1"><a class="docs-heading-anchor" href="#Instruments-1">Instruments</a><a class="docs-heading-anchor-permalink" href="#Instruments-1" title="Permalink"></a></h2><p>In the simulated data <code>x[2:end,:,:]</code> and <code>w</code> are uncorrelated with <code>ξ</code> and <code>ω</code>, but price, <code>x[1,:,:]</code>, is endogenous. The price of the <code>j</code>th firm will depend on the characteristics and costs of all other goods, so these are available as instruments. <a href="../functions/#BLPDemand.makeivblp"><code>makeivblp</code></a> is a convenience function that constructs the sum of all other firms&#39; exogenous variables to use as instruments. This is similar to what Berry, Levinsohn, and Pakes (1995) do. We will see below though that much more accurate estimates can be obtained by using the optimal instruments. </p><pre><code class="language-julia">z = makeivblp(cat(x[2:end,:,:], w, dims=1));
-size(z)</code></pre><pre><code class="language-none">(8, 5, 100)</code></pre><h2 id="Estimation-1"><a class="docs-heading-anchor" href="#Estimation-1">Estimation</a><a class="docs-heading-anchor-permalink" href="#Estimation-1" title="Permalink"></a></h2><p>We can now estimate the model. Three methods are available: GMM with nested-fixed point (<code>:NFXP</code>), constrained GMM (<code>:MPEC</code>), and constrained GEL (<code>:GEL</code>). See <a href="../functions/#BLPDemand.estimateBLP-Tuple{AbstractArray{T,2} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T}"><code>estimateBLP</code></a>. </p><pre><code class="language-julia-repl">julia&gt; @time nfxp = estimateBLP(s, x, ν, z, w, z, method=:NFXP, verbose=false)
+ 0.429307860081008   </code></pre><p>Estimation will encounter numerical difficulties if market shares are very close (within 1e-4) to 0 or 1. The above range should be fine. </p><h2 id="Instruments-1"><a class="docs-heading-anchor" href="#Instruments-1">Instruments</a><a class="docs-heading-anchor-permalink" href="#Instruments-1" title="Permalink"></a></h2><p>In the simulated data <code>sim[].x[2:end,:]</code> and <code>sim[].w</code> are uncorrelated with <code>ξ</code> and <code>ω</code>, but price, <code>sim[].x[1,:]</code>, is endogenous. The price of the <code>j</code>th firm will depend on the characteristics and costs of all other goods, so these are available as instruments. <a href="../functions/#BLPDemand.makeivblp"><code>makeivblp</code></a> is a convenience function that constructs the sum of all other firms&#39; exogenous variables to use as instruments. This is similar to what Berry, Levinsohn, and Pakes (1995) do. We will see below though that much more accurate estimates can be obtained by using the optimal instruments. <code>makeivblp</code> is used by <code>simulateBLP</code> to generate <code>sim[].zd</code> and <code>sim[].zs</code>.</p><h2 id="Estimation-1"><a class="docs-heading-anchor" href="#Estimation-1">Estimation</a><a class="docs-heading-anchor-permalink" href="#Estimation-1" title="Permalink"></a></h2><p>We can now estimate the model. Three methods are available: GMM with nested-fixed point (<code>:NFXP</code>), constrained GMM (<code>:MPEC</code>), and constrained GEL (<code>:GEL</code>). See <a href="../functions/#BLPDemand.estimateBLP-Tuple{Array{MarketData,1}}"><code>estimateBLP</code></a>. </p><pre><code class="language-julia-repl">julia&gt; @time nfxp = estimateBLP(sim, method=:NFXP, verbose=false)
 (β0, σ0, γ0) = ([-1.609140364034411, 1.9694140802567828, 2.021544978016266], [1.0, 1.0, 1.0], [0.3015498493626724, 0.3060476179278376])
-objectiveBLP(θ0) = 2976.826462598553
- 74.256498 seconds (318.19 M allocations: 18.494 GiB, 11.40% gc time)
-(β = [-1.4817482598331593, 2.0691394770724116, 2.0513030163761163], σ = [0.33241888560340915, 0.237235396407359, 0.25998114513224596], γ = [0.31935867572741033, 0.38243223529348], ξ = [0.09993413789836075 -0.2327169954326498 … 0.2171246008857436 -0.12119814725182732; 0.10180705170351079 0.26302036046247823 … 0.14025389275230937 0.05530358648877043; … ; 0.4193160286479446 0.02659065537266256 … 0.0810049528295739 -0.27892056048074865; 0.1913164829935894 0.2602417272845119 … -0.29095381603294 -0.07986465095417516], ω = [0.012548460528719274 -0.016818765860560525 … 0.06700477561672824 0.19108174699027325; 0.02269894516136826 0.11876290139693413 … 0.02233603808447948 -0.28808011655604615; … ; 0.017755810842080222 -0.22122881456578752 … 0.18149646550720266 0.15777159127624074; 0.013330590253257668 -0.0055960552318111145 … -0.11507662045503197 0.06453729922304158], opt =  * Status: failure (objective increased between iterations) (line search failed)
+objectiveBLP(θ0) = 2976.826462598552
+ 65.224017 seconds (311.07 M allocations: 16.855 GiB, 10.15% gc time)
+(β = [-1.4817551684021812, 2.0691664222942356, 2.0513168696544457], σ = [0.3324123815395511, 0.23729947283560093, 0.26002598111251607], γ = [0.31935374697043295, 0.3824176615720655], ξ = Array{Float64,1}[[0.09990611445981112, 0.1017915547816941, -0.05354645640805278, 0.41928342938566704, 0.19131004449637645], [-0.23272425772177696, 0.2630157014021214, 0.33501055811189395, 0.026583294734242896, 0.26022875483998587], [-0.21216062039169642, 0.01079860850046041, -0.055988978299892356, 0.17040917903286557, 0.05566810080519524], [-0.2062901893340121, 0.18733632848836212, 0.3428394588476408, -0.1867951637770614, -0.21092462732995948], [-0.14612186457020582, -0.18782534146997776, 0.04701703237185684, -0.22106930304394523, 0.030351581749108902], [0.21815207781253604, 0.1736523390647594, -0.19484144438029782, 0.2865039938565149, 0.20437214851752294], [0.2970443716982921, -0.1839551268738936, 0.018992407546498488, -0.0067116522925443345, -0.20719331879464065], [0.16108838555454053, 0.16365490351365364, 0.047869184948157284, -0.30449118751635007, 0.07065379302180563], [-0.15889441341480048, -0.20242477768539402, 0.13536867042785583, -0.018572247970730205, 0.12390818704033246], [0.09076302773900091, -0.20338476580198506, 0.016051030747121497, 0.09747111282016419, -0.21903067213096739]  …  [-0.1624188417338841, -0.12949441792367555, 0.13861932966489893, 0.09694750953310016, 0.1229878860296037], [-0.05241478471188099, 0.2591882171750495, -0.5070840276955668, 0.5308837429284969, 0.15243346446701123], [0.3792637180929006, 0.49447093167579315, -0.2584283943206299, 0.016444235880147318, -0.11391237034087814], [-0.11459444029491894, -0.06435523319250125, 0.023945399353320296, -0.4010716901245994, -0.11053056988341003], [0.04699775721724575, 0.18589557098694018, -0.06579464082986759, -0.007859358025674168, 0.16020771729507416], [0.3925291770984676, 0.10922333903704273, -0.05211856690509975, 0.1991447611922068, -0.09663918543456407], [-0.11767786440433892, 0.33328427843591146, -0.1869110049927114, -0.1210325908037877, 0.2730214248756281], [0.0750005735273811, -0.013617961274764667, 0.3181533223083779, 0.17425003371796982, -0.040959049864123465], [0.2171188414113464, 0.1402583906212551, 0.16505320604956197, 0.08098939774295427, -0.29097022309496956], [-0.12118953147972888, 0.0553117542514151, 0.07364278234760793, -0.2789246475217356, -0.079857333096089]], ω = Array{Float64,1}[[0.012559409314334802, 0.02270069571549244, -0.4637560442275874, 0.017763636173895703, 0.013337281227824627], [-0.016800840136410478, 0.11877144729114159, -0.15623042239457832, -0.22121845841971932, -0.005583042235855651], [-0.05192475793874707, -0.21749844057663892, -0.1256190298061854, 0.09168264340808108, 0.21607611388798725], [0.11650242853720527, 0.010937301811676958, 0.006659991035829704, 0.10637219429916839, -0.41436182113196773], [-0.1433695996097628, -0.026176555556864545, 0.11314884933152322, 0.08655344661344416, -0.419714757948083], [-0.28170102846551937, -0.003721236526406213, -0.06093161597977227, -0.05114868630440693, 0.0559890159652876], [0.1466408953512371, 0.04364592233674955, -0.15741223449775416, 0.09289992190633123, -0.1546842239634939], [0.06625059294045446, -0.2547083913206401, -0.1742491194443315, -0.21397496830522533, 0.14907125473392635], [-0.18811557687066535, -0.18955275410424055, 0.26617649634713014, -0.2916240972296465, 0.02510499108579206], [0.025767325983535427, -0.14788588588438661, -0.28819971066550093, 0.025153467531694063, -0.07682553690108185]  …  [-0.0019331804431165223, -0.3076260325255758, -0.11629335822715642, -0.14551434239262673, -0.02876506572498272], [0.4713461439733845, 0.23586593293519753, 0.19069056050433808, 0.40072017475540167, -0.036958547361850336], [0.2760710334797152, 0.24347027267029042, -0.13447190130099546, 0.07775369790602471, -0.3299158206544205], [-0.03610085852948178, 0.15022962592183065, 0.22406385803679219, -0.4833493940583337, -0.17696490454177577], [-0.039716074518928446, 0.2016078882413973, -0.21034077311272037, 0.01705289755093581, 0.27512875271084647], [-0.17968030090923376, -0.14678162886758556, 0.04029696650470327, 0.23746324826969395, -0.1867595419023913], [0.3255268945830239, -0.11437822313094288, -0.21517627776620038, 0.057061384260871845, -0.08409199068775408], [0.012701316322513978, 0.30425392449669225, 0.03949972893496989, -0.3023358358866649, -0.0882312913279587], [0.06701291385863334, 0.022350055452712403, 0.01229219539501264, 0.18150380858960774, -0.11507042588097463], [0.19109961112680496, -0.28806214878598263, -0.1627045003790893, 0.1577780235622071, 0.0645502302405287]], opt =  * Status: failure (objective increased between iterations) (line search failed)
 
  * Candidate solution
     Minimizer: [-1.48e+00, 2.07e+00, 2.05e+00,  ...]
-    Minimum:   2.513197e-03
+    Minimum:   2.513196e-03
 
  * Found with
     Algorithm:     L-BFGS
     Initial Point: [-1.61e+00, 1.97e+00, 2.02e+00,  ...]
 
  * Convergence measures
-    |x - x&#39;|               = 9.28e-05 ≰ 0.0e+00
-    |x - x&#39;|/|x&#39;|          = 4.48e-05 ≰ 0.0e+00
-    |f(x) - f(x&#39;)|         = 3.16e-10 ≰ 0.0e+00
-    |f(x) - f(x&#39;)|/|f(x&#39;)| = 1.26e-07 ≰ 0.0e+00
-    |g(x)|                 = 4.50e-05 ≰ 1.0e-08
+    |x - x&#39;|               = 3.99e-05 ≰ 0.0e+00
+    |x - x&#39;|/|x&#39;|          = 1.93e-05 ≰ 0.0e+00
+    |f(x) - f(x&#39;)|         = 2.12e-11 ≰ 0.0e+00
+    |f(x) - f(x&#39;)|/|f(x&#39;)| = 8.43e-09 ≰ 0.0e+00
+    |g(x)|                 = 4.39e-05 ≰ 1.0e-08
 
  * Work counters
-    Seconds run:   17  (vs limit Inf)
-    Iterations:    219
-    f(x) calls:    615
-    ∇f(x) calls:   615
+    Seconds run:   15  (vs limit Inf)
+    Iterations:    223
+    f(x) calls:    637
+    ∇f(x) calls:   637
 )
 
-julia&gt; @time mpec = estimateBLP(s, x, ν, z, w, z, method=:MPEC,verbose=true);
+julia&gt; @time mpec = estimateBLP(sim, method=:MPEC,verbose=true);
 (β0, σ0, γ0) = ([-1.609140364034411, 1.9694140802567828, 2.021544978016266], [1.0, 1.0, 1.0], [0.3015498493626724, 0.3060476179278376])
 
 ******************************************************************************
@@ -86,11 +85,11 @@ iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
 Number of Iterations....: 9
 
                                    (scaled)                 (unscaled)
-Objective...............:   2.5131932776579239e-03    2.5131932776579239e-03
-Dual infeasibility......:   2.2541205542631824e-09    2.2541205542631824e-09
-Constraint violation....:   4.6961515128007836e-09    4.6961515128007836e-09
-Complementarity.........:   4.3522933370573878e-09    4.3522933370573878e-09
-Overall NLP error.......:   4.6961515128007836e-09    4.6961515128007836e-09
+Objective...............:   2.5131932776656556e-03    2.5131932776656556e-03
+Dual infeasibility......:   2.2541206907371309e-09    2.2541206907371309e-09
+Constraint violation....:   4.6961516446397678e-09    4.6961516446397678e-09
+Complementarity.........:   4.3522933362595993e-09    4.3522933362595993e-09
+Overall NLP error.......:   4.6961516446397678e-09    4.6961516446397678e-09
 
 
 Number of objective function evaluations             = 10
@@ -100,13 +99,13 @@ Number of inequality constraint evaluations          = 0
 Number of equality constraint Jacobian evaluations   = 10
 Number of inequality constraint Jacobian evaluations = 0
 Number of Lagrangian Hessian evaluations             = 9
-Total CPU secs in IPOPT (w/o function evaluations)   =     21.734
-Total CPU secs in NLP function evaluations           =      7.228
+Total CPU secs in IPOPT (w/o function evaluations)   =     22.349
+Total CPU secs in NLP function evaluations           =      4.454
 
 EXIT: Optimal Solution Found.
- 53.227468 seconds (62.48 M allocations: 3.450 GiB, 3.21% gc time)
+ 53.142024 seconds (63.14 M allocations: 3.474 GiB, 3.78% gc time)
 
-julia&gt; @time gel = estimateBLP(s, x, ν, z, w, z, method=:GEL,verbose=true);
+julia&gt; @time gel = estimateBLP(sim, method=:GEL,verbose=true);
 (β0, σ0, γ0) = ([-1.609140364034411, 1.9694140802567828, 2.021544978016266], [1.0, 1.0, 1.0], [0.3015498493626724, 0.3060476179278376])
 This is Ipopt version 3.12.10, running with linear solver mumps.
 NOTE: Other linear solvers might be more efficient (see Ipopt documentation).
@@ -126,52 +125,43 @@ Total number of inequality constraints...............:        1
         inequality constraints with only upper bounds:        1
 
 iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-   0  4.6051712e+02 1.25e+01 7.09e-02  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0
-   1  4.6185917e+02 3.53e+00 1.94e-01  -1.0 1.98e+00    -  9.94e-01 1.00e+00h  1
-   2  4.6168078e+02 1.51e+00 2.00e+00  -1.0 1.69e+00    -  1.00e+00 7.92e-01h  1
-   3  4.6168939e+02 5.25e-01 2.07e+00  -1.0 1.50e+00    -  1.00e+00 1.00e+00f  1
-   4  4.6177325e+02 9.38e-02 1.59e+00  -1.0 7.83e-01    -  1.00e+00 1.00e+00h  1
-   5  4.6196198e+02 2.96e-02 2.24e+00  -1.0 4.65e-01    -  1.00e+00 1.00e+00h  1
-   6  4.6226549e+02 6.08e-03 5.27e-01  -1.0 2.47e-01    -  1.00e+00 1.00e+00h  1
-   7  4.6246082e+02 1.74e-04 1.42e-01  -1.7 2.54e-02    -  1.00e+00 1.00e+00h  1
-   8  4.6249792e+02 4.15e-05 2.47e-02  -2.5 1.31e-02    -  1.00e+00 1.00e+00h  1
-   9  4.6250330e+02 9.98e-07 3.24e-04  -3.8 2.69e-03    -  1.00e+00 1.00e+00h  1
+   0  4.6051702e+02 1.25e+01 8.32e+01  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0
+   1  4.5954628e+02 1.23e+01 1.76e+01  -1.0 3.12e+00    -  1.00e+00 1.44e-02h  1
+   2  4.6082558e+02 3.33e+00 2.80e+01  -1.0 1.85e+00    -  1.00e+00 1.00e+00h  1
+   3  4.6062769e+02 7.30e-01 3.88e+00  -1.0 6.39e-01    -  1.00e+00 1.00e+00h  1
+   4  4.6076702e+02 5.87e-02 7.73e+00  -1.0 3.97e-01    -  1.00e+00 1.00e+00h  1
+   5  4.6084017e+02 3.93e-03 2.73e+00  -1.0 2.46e-01    -  1.00e+00 1.00e+00h  1
+   6  4.6091258e+02 4.32e-04 4.20e-01  -1.0 8.14e-02    -  1.00e+00 1.00e+00h  1
+   7  4.6083978e+02 1.76e-04 2.80e-01  -1.7 4.45e-02    -  1.00e+00 1.00e+00h  1
+   8  4.6083394e+02 1.47e-05 8.32e-03  -1.7 1.43e-02    -  1.00e+00 1.00e+00h  1
+   9  4.6081286e+02 4.81e-05 6.43e-02  -3.8 2.59e-02    -  9.96e-01 1.00e+00h  1
 iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-  10  4.6250443e+02 4.13e-08 3.66e-06  -5.7 5.52e-04    -  1.00e+00 1.00e+00h  1
-  11  4.6249325e+02 8.11e-07 2.14e-07  -8.6 2.06e-03    -  1.00e+00 1.00e+00h  1
-  12  4.6114718e+02 1.70e-02 7.73e-08  -8.6 3.17e-01    -  1.00e+00 1.00e+00h  1
-  13  4.6109007e+02 1.79e-04 2.88e-09  -8.6 2.29e-02    -  1.00e+00 1.00e+00h  1
-  14  4.6108859e+02 1.35e-07 4.54e-12  -8.6 8.52e-04    -  1.00e+00 1.00e+00h  1
-  15  4.6108860e+02 8.89e-14 2.51e-14  -8.6 8.38e-07    -  1.00e+00 1.00e+00h  1
-  16  4.6086393e+02 8.79e-04 2.80e-08 -12.9 8.92e-02    -  9.49e-01 1.00e+00h  1
-  17  4.6080980e+02 3.57e-04 2.70e-09 -12.9 7.10e-02    -  9.77e-01 1.00e+00h  1
-  18  4.6081264e+02 1.40e-05 3.32e-11 -12.9 1.39e-02    -  1.00e+00 1.00e+00h  1
-  19  4.6081282e+02 1.60e-08 6.15e-14 -12.9 4.82e-04    -  1.00e+00 1.00e+00h  1
-iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-  20  4.6081282e+02 4.10e-14 1.46e-18 -12.9 8.01e-07    -  1.00e+00 1.00e+00h  1
+  10  4.6081295e+02 9.83e-07 3.33e-04  -3.8 3.74e-03    -  1.00e+00 1.00e+00h  1
+  11  4.6081281e+02 5.71e-09 5.24e-06  -5.7 2.84e-04    -  1.00e+00 1.00e+00h  1
+  12  4.6081281e+02 8.78e-13 8.20e-10  -8.6 3.53e-06    -  1.00e+00 1.00e+00h  1
 
-Number of Iterations....: 20
+Number of Iterations....: 12
 
                                    (scaled)                 (unscaled)
-Objective...............:   4.6081282095664873e-06    4.6081282095664869e+02
-Dual infeasibility......:   1.4604400816082007e-18    1.4604400816082007e-10
-Constraint violation....:   4.0977637949524137e-14    4.0977637949524137e-14
-Complementarity.........:   1.2544304843764799e-13    1.2544304843764798e-05
-Overall NLP error.......:   1.2544304843764799e-13    1.2544304843764798e-05
+Objective...............:   4.6081280841417941e+02    4.6081280841417941e+02
+Dual infeasibility......:   8.2034537713174260e-10    8.2034537713174260e-10
+Constraint violation....:   8.7828702644010548e-13    8.7828702644010548e-13
+Complementarity.........:   2.5320651417388265e-09    2.5320651417388265e-09
+Overall NLP error.......:   2.5320651417388265e-09    2.5320651417388265e-09
 
 
-Number of objective function evaluations             = 21
-Number of objective gradient evaluations             = 21
-Number of equality constraint evaluations            = 21
-Number of inequality constraint evaluations          = 21
-Number of equality constraint Jacobian evaluations   = 21
-Number of inequality constraint Jacobian evaluations = 21
-Number of Lagrangian Hessian evaluations             = 20
-Total CPU secs in IPOPT (w/o function evaluations)   =      0.332
-Total CPU secs in NLP function evaluations           =     12.707
+Number of objective function evaluations             = 13
+Number of objective gradient evaluations             = 13
+Number of equality constraint evaluations            = 13
+Number of inequality constraint evaluations          = 13
+Number of equality constraint Jacobian evaluations   = 13
+Number of inequality constraint Jacobian evaluations = 13
+Number of Lagrangian Hessian evaluations             = 12
+Total CPU secs in IPOPT (w/o function evaluations)   =      0.237
+Total CPU secs in NLP function evaluations           =      3.647
 
 EXIT: Optimal Solution Found.
- 17.228282 seconds (9.99 M allocations: 921.009 MiB, 2.92% gc time)</code></pre><pre><code class="language-julia">tbl = vcat([&quot;&quot; &quot;True&quot; &quot;NFXP&quot; &quot;MPEC&quot; &quot;GEL&quot;],
+  7.493460 seconds (9.29 M allocations: 884.159 MiB, 8.15% gc time)</code></pre><pre><code class="language-julia">tbl = vcat([&quot;&quot; &quot;True&quot; &quot;NFXP&quot; &quot;MPEC&quot; &quot;GEL&quot;],
            [(i-&gt;&quot;β[$i]&quot;).(1:length(β)) β nfxp.β mpec.β gel.β],
            [(i-&gt;&quot;σ[$i]&quot;).(1:length(σ)) σ nfxp.σ mpec.σ gel.σ],
            [(i-&gt;&quot;γ[$i]&quot;).(1:length(γ)) γ nfxp.γ mpec.γ gel.γ])
@@ -185,10 +175,10 @@ pretty_table(tbl, noheader=true, formatter=ft_printf(&quot;%6.3f&quot;,3:5))</co
 │ σ[3] │  0.2 │  0.260 │  0.260 │  0.262 │
 │ γ[1] │  0.3 │  0.319 │  0.319 │  0.308 │
 │ γ[2] │  0.3 │  0.382 │  0.382 │  0.387 │
-└──────┴──────┴────────┴────────┴────────┘</code></pre><p>In the absence of optimization error and other numeric problems, <code>:NFXP</code> and <code>:MPEC</code> should produce identical results.  In finite sample, we should expect the GEL estimates to differ. All three methods are consistent, but GEL is also asymptotically efficient (for a fixed choice of <code>z</code>; different <code>z</code> can have large effects on efficiency).</p><h2 id="Inference-1"><a class="docs-heading-anchor" href="#Inference-1">Inference</a><a class="docs-heading-anchor-permalink" href="#Inference-1" title="Permalink"></a></h2><p><a href="../functions/#BLPDemand.varianceBLP-Tuple{Any,Any,Any,AbstractArray{T,2} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T}"><code>varianceBLP</code></a> computes the variance of the estimates produced by either of GMM estimation methods. </p><pre><code class="language-julia">vnfxp = varianceBLP(nfxp.β, nfxp.σ, nfxp.γ, s, x, ν, z, w, z);
-vmpec = varianceBLP(mpec.β, mpec.σ, mpec.γ, s, x, ν, z, w, z);
-nothing</code></pre><p>Inference for GEL has not been directly implemented. However, GEL is first order asymptotically equivalent to efficiently weigthed GMM. In other words, GEL estimates have the same asymptotic variance as efficiently weighted GMM. </p><pre><code class="language-">v = varianceBLP(gel.β, gel.σ, gel.γ, s, x, ν, z, w, z)
-vgel = varianceBLP(gel.β, gel.σ, gel.γ, s, x, ν, z, w,z,W=inv(v.varm))
+└──────┴──────┴────────┴────────┴────────┘</code></pre><p>In the absence of optimization error and other numeric problems, <code>:NFXP</code> and <code>:MPEC</code> should produce identical results.  In finite sample, we should expect the GEL estimates to differ. All three methods are consistent, but GEL is also asymptotically efficient (for a fixed choice of <code>z</code>; different <code>z</code> can have large effects on efficiency).</p><h2 id="Inference-1"><a class="docs-heading-anchor" href="#Inference-1">Inference</a><a class="docs-heading-anchor-permalink" href="#Inference-1" title="Permalink"></a></h2><p><a href="../functions/#BLPDemand.varianceBLP-Tuple{Any,Any,Any,Array{MarketData,1}}"><code>varianceBLP</code></a> computes the variance of the estimates produced by either of GMM estimation methods. </p><pre><code class="language-julia">vnfxp = varianceBLP(nfxp.β, nfxp.σ, nfxp.γ, sim);
+vmpec = varianceBLP(mpec.β, mpec.σ, mpec.γ, sim);
+nothing</code></pre><p>Inference for GEL has not been directly implemented. However, GEL is first order asymptotically equivalent to efficiently weigthed GMM. In other words, GEL estimates have the same asymptotic variance as efficiently weighted GMM. </p><pre><code class="language-">v = varianceBLP(gel.β, gel.σ, gel.γ, sim)
+vgel = varianceBLP(gel.β, gel.σ, gel.γ, sim)
 
 f(v) = @sprintf(&quot;(%.2f)&quot;, sqrt(v))
 vtbl = permutedims(hcat(tbl[1,:],
@@ -196,46 +186,46 @@ vtbl = permutedims(hcat(tbl[1,:],
                               [&quot;&quot;, &quot;&quot;, f.([vnfxp.Σ[i,i], vmpec.Σ[i,i], vgel.Σ[i,i]])...])
                          for i in 1:size(vgel.Σ,1)]...
                         ))
-pretty_table(vtbl, noheader=true, formatter=ft_printf(&quot;%6.3f&quot;,3:5))</code></pre><p>As you can see, these standard errors are suspiciously large. It is possible that there is an error in the code, but I think the problem lies in the functional form of the unconditional instruments.</p><h2 id="Optimal-Instruments-1"><a class="docs-heading-anchor" href="#Optimal-Instruments-1">Optimal Instruments</a><a class="docs-heading-anchor-permalink" href="#Optimal-Instruments-1" title="Permalink"></a></h2><p>The above estimators use the unconditional moment restriction </p><div>\[E[(\xi, \omega) z] =0.\]</div><p>If we assume the conditional moment restriction,</p><div>\[E[(\xi, \omega) | z] =0.\]</div><p>then, we can potentially use any function of <span>$z$</span> to form unconditional moments. </p><div>\[E[(\xi, \omega) f(z)] =0.\]</div><p>The optimal (minimal asymptotic variance) choice of <code>f(z)</code> is </p><div>\[\frac{\partial}{\partial \theta} E[(\xi, \omega) | z] =0.\]</div><p><a href="../functions/#BLPDemand.optimalIV-Tuple{Any,Any,Any,AbstractArray{T,2} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T,AbstractArray{T,3} where T}"><code>optimalIV</code></a> approximates the optimal instruments by taking as initial estimate of <span>$\theta$</span>, computing <span>$\frac{\partial (\xi, \omega)}{\partial \theta}$</span> for each observation in the data, and then regressing this on a polynomial function of <span>$z$</span>. Using the fitted values from this regression as <span>$f(z)$</span> results in much more precise estimates of <span>$\theta$</span>. </p><pre><code class="language-julia">zd,zs=optimalIV(gel.β, max.(gel.σ, 0.1), # calculating optimal IV with σ near 0 gives poor peformance
-                gel.γ, s, x, ν, z, w);
-nothing</code></pre><pre><code class="language-julia-repl">julia&gt; @time nfxp = estimateBLP(s, x, ν, zd, w, zs, method=:NFXP, verbose=false)
-(β0, σ0, γ0) = ([-1.600877752222427, 1.9524144108487613, 2.005835869502716], [1.0, 1.0, 1.0], [0.2992375425206874, 0.30381006179771075])
-objectiveBLP(θ0) = 634069.5445286575
- 30.734045 seconds (311.97 M allocations: 18.574 GiB, 24.96% gc time)
-(β = [-1.5000746713570616, 2.0054289291149385, 2.0529166421790452], σ = [0.2482737988693563, 4.6699550686703543e-8, 0.0816205297351483], γ = [0.3050517159161458, 0.30796372357116614], ξ = [0.09284266825970583 -0.27518304760374046 … 0.14175968128004768 -0.19940397770287888; 0.09272798444397268 0.2015943132187168 … 0.05317216835116678 -0.04708088793655252; … ; 0.4281482170921035 -0.01810923472673126 … 0.008490220507027635 -0.3413692142133835; 0.1401467739766904 0.2124900062105255 … -0.33338691531041764 -0.13715349086378836], ω = [0.05152778874512609 0.05878489911587331 … 0.08938036140881411 0.26728763934945254; 0.015121069741132784 0.1544461800710835 … 0.07373544707952967 -0.21802971665345405; … ; 0.04615563273332496 -0.18935848455898513 … 0.21348143611831025 0.17363292403713582; 0.02906584587026151 0.04969489194592214 … -0.0972186989784804 0.11926295997021796], opt =  * Status: failure (objective increased between iterations) (line search failed)
+pretty_table(vtbl, noheader=true, formatter=ft_printf(&quot;%6.3f&quot;,3:5))</code></pre><p>As you can see, these standard errors are suspiciously large. It is possible that there is an error in the code, but I think the problem lies in the functional form of the unconditional instruments.</p><h2 id="Optimal-Instruments-1"><a class="docs-heading-anchor" href="#Optimal-Instruments-1">Optimal Instruments</a><a class="docs-heading-anchor-permalink" href="#Optimal-Instruments-1" title="Permalink"></a></h2><p>The above estimators use the unconditional moment restriction </p><div>\[E[(\xi, \omega) z] =0.\]</div><p>If we assume the conditional moment restriction,</p><div>\[E[(\xi, \omega) | z] =0.\]</div><p>then, we can potentially use any function of <span>$z$</span> to form unconditional moments. </p><div>\[E[(\xi, \omega) f(z)] =0.\]</div><p>The optimal (minimal asymptotic variance) choice of <code>f(z)</code> is </p><div>\[\frac{\partial}{\partial \theta} E[(\xi, \omega) | z] =0.\]</div><p><a href="../functions/#BLPDemand.optimalIV-Tuple{Any,Any,Any,Array{MarketData,1}}"><code>optimalIV</code></a> approximates the optimal instruments by taking as initial estimate of <span>$\theta$</span>, computing <span>$\frac{\partial (\xi, \omega)}{\partial \theta}$</span> for each observation in the data, and then regressing this on a polynomial function of <span>$z$</span>. Using the fitted values from this regression as <span>$f(z)$</span> results in much more precise estimates of <span>$\theta$</span>. </p><pre><code class="language-julia">sim=optimalIV(gel.β, max.(gel.σ, 0.1), # calculating optimal IV with σ near 0 gives poor peformance
+              gel.γ, sim);
+nothing</code></pre><pre><code class="language-julia-repl">julia&gt; @time nfxp = estimateBLP(sim, method=:NFXP, verbose=false)
+(β0, σ0, γ0) = ([-1.6054081289345496, 1.9625835982728204, 2.01507609454587], [1.0, 1.0, 1.0], [0.3005091643711373, 0.3050405657597087])
+objectiveBLP(θ0) = 363775.88953029993
+ 17.650934 seconds (187.72 M allocations: 9.847 GiB, 23.37% gc time)
+(β = [-1.247533145213581, 1.969809861688081, 2.0545986891584294], σ = [0.6701673429531225, 0.7602765398224106, 0.5450575795216901], γ = [0.28226036105283303, 0.28687274202909524], ξ = Array{Float64,1}[[0.09542936146935922, 0.15401434231822342, -0.046042958100006914, 0.38544574796674164, 0.2144179307730223], [-0.20596142960123565, 0.2132004826376763, 0.38838771532367455, 0.08558636305025158, 0.3117237054112259], [-0.29097632429179643, -0.050560021942676725, -0.09093180774044962, 0.07125182444362704, -0.010365629905989826], [0.11149276454559692, 0.5374336839217497, 0.6778557254321684, 0.14220812751128797, -0.04398147854347231], [-0.3051982075803135, -0.2467481181612139, -0.03921775452053595, -0.38319152424154485, -0.08588557973769051], [0.11994078865288585, 0.025924307367726565, -0.3409171169482925, 0.17590571127047927, 0.017726004191076394], [0.45267492744551446, -0.18037446786271155, 0.11545234214606703, -0.03445703037290393, -0.24771478272713532], [0.17372481361170206, 0.12701767494691518, 0.059022686307841465, -0.343019877514932, -0.020672328038161103], [-0.248378927040389, -0.2797746124000773, 0.04563264609555773, -0.06591248295374719, 0.06599176350461466], [0.13600170859145688, -0.17127705125312215, 0.06049115506858527, 0.0619222552308516, -0.2583210926508088]  …  [-0.18861078568584544, -0.10873996837425348, 0.1251114952745635, 0.05499167443670727, 0.07831762620709504], [-0.1614020179211213, 0.20652234242354273, -0.639259543803957, 0.5143431599277657, 0.07184541533102962], [0.3750189164991171, 0.5094922844370904, -0.22641974017992558, 0.04521967581468059, -0.07733101923856317], [-0.08217401922666545, -0.2630608105915271, -0.03709616820095696, -0.3924280743808218, -0.10831405365433211], [0.07764995884220638, 0.20324032954744664, -0.032243363150817494, 0.011686617959806342, 0.15423363698906856], [0.1963909870253051, -0.021292262702129916, -0.3101123977440611, -0.004645757930237249, -0.24171461169172326], [-0.14705289745592814, 0.29987969008875576, -0.1785589814974584, -0.08960723979179142, 0.11526262522705821], [0.061092798288253286, -0.165324232186979, 0.2001692860311406, 0.15211710024708727, -0.1315689834367304], [0.31549424812768556, 0.20558339670794168, 0.13504562814316157, 0.17128069755252623, -0.3688355797908175], [-0.16482577258511766, 0.0858261995029671, 0.16629818386913658, -0.23713759921725058, -0.12304218438634451]], ω = Array{Float64,1}[[0.06342927194659559, 0.011278609046568772, -0.4224560033426883, 0.03434866542720394, 0.037622500033476086], [0.07900128226307906, 0.13747269973739235, -0.12788012981147368, -0.19118443264649884, 0.03912995098326394], [-0.03753883560055357, -0.20986742948881548, -0.05039638176492012, 0.18476633842143747, 0.2238579803377091], [0.15627210878139491, 0.011733682902808573, 0.07901722773476666, 0.17937080797242194, -0.34973066627344546], [-0.17214415449024112, 0.02771912183709674, 0.11353364169665142, 0.14742505754399637, -0.4647937880922478], [-0.29800579932262966, 0.021568584330525636, -0.09625152485198842, -0.054027865383489214, 0.1131454393197065], [0.18301105775060872, 0.05911804594132797, -0.11824983892916796, 0.14655681173015062, -0.09086770125365196], [0.07344273448837399, -0.19429642691347587, -0.2605856199351286, -0.19291660847582418, 0.18171052211989025], [-0.19740682595210388, -0.13047123434124655, 0.273986970971837, -0.22271625436103515, 0.02473450070613767], [0.02252518202707865, -0.09544580539040465, -0.23606368757096244, 0.08587708547908413, -0.0711866875413575]  …  [0.10282359903431404, -0.2780731497828671, -0.0933768534175217, -0.09268685980033226, -0.00613910418584504], [0.5607111793183831, 0.23227541415150524, 0.21838758962593172, 0.3963871263573454, 0.05006396516491374], [0.3301597598286982, 0.24751391884422794, -0.05146601487423841, 0.14831962137225851, -0.3242457581922733], [-0.032097331759740014, 0.20413207484568152, 0.2859756731282109, -0.5277264844423075, -0.10589171509965001], [-0.022044740118836337, 0.1977658486691249, -0.2253955086708381, 0.08198839859318419, 0.2694072057628364], [-0.13461028783428064, -0.17552830693153046, 0.06932267018270177, 0.2423132151237437, -0.204427918396116], [0.33445618329635457, -0.11849319103942738, -0.1652538906786577, 0.06970523144225987, -0.02584123284613965], [0.026289627131717452, 0.3312761249912152, 0.05282290925939451, -0.30123137716996495, -0.01871726587409961], [0.10113416362609728, 0.10180214259685444, 0.08724504129455007, 0.18950886554936375, -0.1078883533371017], [0.2878489472666503, -0.20199089899157047, -0.22455758537295156, 0.1706819154189548, 0.11792154356943613]], opt =  * Status: failure (objective increased between iterations) (line search failed)
 
  * Candidate solution
-    Minimizer: [-1.50e+00, 2.01e+00, 2.05e+00,  ...]
-    Minimum:   1.506006e-03
+    Minimizer: [-1.25e+00, 1.97e+00, 2.05e+00,  ...]
+    Minimum:   2.983577e-05
 
  * Found with
     Algorithm:     L-BFGS
-    Initial Point: [-1.60e+00, 1.95e+00, 2.01e+00,  ...]
+    Initial Point: [-1.61e+00, 1.96e+00, 2.02e+00,  ...]
 
  * Convergence measures
-    |x - x&#39;|               = 3.00e-01 ≰ 0.0e+00
-    |x - x&#39;|/|x&#39;|          = 1.75e-02 ≰ 0.0e+00
-    |f(x) - f(x&#39;)|         = 4.71e-10 ≰ 0.0e+00
-    |f(x) - f(x&#39;)|/|f(x&#39;)| = 3.13e-07 ≰ 0.0e+00
-    |g(x)|                 = 2.06e-02 ≰ 1.0e-08
+    |x - x&#39;|               = 1.17e-07 ≰ 0.0e+00
+    |x - x&#39;|/|x&#39;|          = 5.70e-08 ≰ 0.0e+00
+    |f(x) - f(x&#39;)|         = 9.95e-15 ≰ 0.0e+00
+    |f(x) - f(x&#39;)|/|f(x&#39;)| = 3.33e-10 ≰ 0.0e+00
+    |g(x)|                 = 5.79e-06 ≰ 1.0e-08
 
  * Work counters
-    Seconds run:   31  (vs limit Inf)
-    Iterations:    345
-    f(x) calls:    940
-    ∇f(x) calls:   940
+    Seconds run:   18  (vs limit Inf)
+    Iterations:    252
+    f(x) calls:    688
+    ∇f(x) calls:   688
 )
 
-julia&gt; @time mpec = estimateBLP(s, x, ν, zd, w, zs, method=:MPEC,verbose=false);
-(β0, σ0, γ0) = ([-1.600877752222427, 1.9524144108487613, 2.005835869502716], [1.0, 1.0, 1.0], [0.2992375425206874, 0.30381006179771075])
- 40.256068 seconds (15.59 M allocations: 1.141 GiB, 1.00% gc time)
+julia&gt; @time mpec = estimateBLP(sim, method=:MPEC,verbose=false);
+(β0, σ0, γ0) = ([-1.6054081289345496, 1.9625835982728204, 2.01507609454587], [1.0, 1.0, 1.0], [0.3005091643711373, 0.3050405657597087])
+266.299703 seconds (17.47 M allocations: 1.172 GiB, 0.10% gc time)
 
-julia&gt; @time gel = estimateBLP(s, x, ν, zd, w, zs, method=:GEL,verbose=false);
-(β0, σ0, γ0) = ([-1.600877752222427, 1.9524144108487613, 2.005835869502716], [1.0, 1.0, 1.0], [0.2992375425206874, 0.30381006179771075])
- 14.353001 seconds (3.82 M allocations: 608.683 MiB)</code></pre><pre><code class="language-julia">vnfxp = varianceBLP(nfxp.β, nfxp.σ, nfxp.γ, s, x, ν, zd, w, zs)
-vmpec = varianceBLP(mpec.β, mpec.σ, mpec.γ, s, x, ν, zd, w, zs)
-v = varianceBLP(gel.β, gel.σ, gel.γ, s, x, ν, zd, w, zs)
-vgel = varianceBLP(gel.β, gel.σ, gel.γ, s, x, ν, zd, w,zs,W=inv(v.varm))
+julia&gt; @time gel = estimateBLP(sim, method=:GEL,verbose=false);
+(β0, σ0, γ0) = ([-1.6054081289345496, 1.9625835982728204, 2.01507609454587], [1.0, 1.0, 1.0], [0.3005091643711373, 0.3050405657597087])
+  5.389832 seconds (4.19 M allocations: 621.579 MiB, 3.76% gc time)</code></pre><pre><code class="language-">vnfxp = varianceBLP(nfxp.β, nfxp.σ, nfxp.γ, sim)
+vmpec = varianceBLP(mpec.β, mpec.σ, mpec.γ, sim)
+v = varianceBLP(gel.β, gel.σ, gel.γ, sim)
+vgel = varianceBLP(gel.β, gel.σ, gel.γ, sim, W=inv(v.varm))
 
 f(v) = @sprintf(&quot;(%.2f)&quot;, sqrt(v))
 tbl = vcat([&quot;&quot; &quot;True&quot; &quot;NFXP&quot; &quot;MPEC&quot; &quot;GEL&quot;],
@@ -247,51 +237,42 @@ vtbl = permutedims(hcat(tbl[1,:],
                               [&quot;&quot;, &quot;&quot;, f.([vnfxp.Σ[i,i], vmpec.Σ[i,i], vgel.Σ[i,i]])...])
                          for i in 1:size(vgel.Σ,1)]...
                         ))
-pretty_table(vtbl, noheader=true, formatter=ft_printf(&quot;%6.3f&quot;,3:5))</code></pre><pre><code class="language-none">┌──────┬──────┬────────┬────────┬────────┐
-│      │ True │   NFXP │   MPEC │    GEL │
-│ β[1] │ -1.5 │ -1.500 │ -1.500 │ -1.502 │
-│      │      │ (0.03) │ (0.03) │ (0.03) │
-│ β[2] │  2.0 │  2.005 │  2.005 │  2.003 │
-│      │      │ (0.03) │ (0.03) │ (0.03) │
-│ β[3] │  2.0 │  2.053 │  2.053 │  2.051 │
-│      │      │ (0.03) │ (0.03) │ (0.03) │
-│ σ[1] │  0.2 │  0.248 │  0.248 │  0.243 │
-│      │      │ (0.05) │ (0.05) │ (0.05) │
-│ σ[2] │  0.2 │  0.000 │  0.000 │  0.000 │
-│      │      │ (0.07) │ (0.07) │ (0.07) │
-│ σ[3] │  0.2 │  0.082 │  0.082 │  0.085 │
-│      │      │ (0.06) │ (0.06) │ (0.06) │
-│ γ[1] │  0.3 │  0.305 │  0.305 │  0.304 │
-│      │      │ (0.02) │ (0.02) │ (0.02) │
-│ γ[2] │  0.3 │  0.308 │  0.308 │  0.308 │
-│      │      │ (0.02) │ (0.02) │ (0.02) │
-└──────┴──────┴────────┴────────┴────────┘</code></pre><p>We see that with the optimal instruments all three methods produce essentially the same results (in this case, theoretically, NFXP=MPEC, and both are asymptotically equivalent to GEL, so this is expected). Moreover, the estimates are now much more precise and quite close to the true parameter values.</p><h2 id="Calculating-Elasticities-1"><a class="docs-heading-anchor" href="#Calculating-Elasticities-1">Calculating Elasticities</a><a class="docs-heading-anchor-permalink" href="#Calculating-Elasticities-1" title="Permalink"></a></h2><p>Using <a href="../functions/#BLPDemand.share-Tuple{AbstractArray{T,1} where T,AbstractArray{T,1} where T,AbstractArray{T,2} where T,AbstractArray{T,2} where T}"><code>share</code></a> and the <code>ForwardDiff.jl</code> package, we can calculate elasticities of demand with respect to each characteristic.</p><pre><code class="language-">function elasticity(β, σ, γ, x, ν, ξ)
-  K,J,T = size(x)
-  e = zeros(typeof(x[:,1,1]&#39;*β+ξ[1,1]),J,K,J,T)
+pretty_table(vtbl, noheader=true, formatter=ft_printf(&quot;%6.3f&quot;,3:5))</code></pre><p>We see that with the optimal instruments all three methods produce essentially the same results (in this case, theoretically, NFXP=MPEC, and both are asymptotically equivalent to GEL, so this is expected). Moreover, the estimates are now much more precise and quite close to the true parameter values.</p><h2 id="Calculating-Elasticities-1"><a class="docs-heading-anchor" href="#Calculating-Elasticities-1">Calculating Elasticities</a><a class="docs-heading-anchor-permalink" href="#Calculating-Elasticities-1" title="Permalink"></a></h2><p>Using <a href="../functions/#BLPDemand.share-Tuple{AbstractArray{T,1} where T,AbstractArray{T,1} where T,AbstractArray{T,2} where T,AbstractArray{T,2} where T}"><code>share</code></a> and the <code>ForwardDiff.jl</code> package, we can calculate elasticities of demand with respect to each characteristic.</p><pre><code class="language-">function elasticity(β, σ, γ, dat, ξ)
+  T = length(dat)
+  K,J = size(dat[1].x)
+  etype = typeof(dat[1].x[:,1]&#39;*β+ξ[1][1])
+  e = Array{Array{etype,3},1}(undef, T)
   for t in 1:T
-    @views xt = x[:,:,t]
-    st(x) = share(x&#39;*β + ξ[:,t], σ, x, ν[:,:,t])
+    @views xt = dat[t].x
+    st(x) = share(x&#39;*β + ξ[t], σ, x, dat[t].ν)
     ∂s = reshape(ForwardDiff.jacobian(st, xt), J, K, J)
     s = st(xt)
+    e[t] = zeros(etype, J,K,J)
     for k in 1:K
       for j in 1:J
-        e[:,k,j,t] .= ∂s[:,k,j]./s .* xt[k,j]
+        e[t][:,k,j] .= ∂s[:,k,j]./s .* xt[k,j]
       end
     end
   end
   return e
 end
 
-function avg_price_elasticity(β,σ,γ)
-  ξ = similar(β, J, T)
+function avg_price_elasticity(β,σ,γ, dat)
+  ξ = Vector{Vector{eltype(β)}}(undef, T)
   for t in 1:T
-    ξ[:,t] .= delta(s[:,t], x[:,:,t], ν[:,:,t], σ) - x[:,:,t]&#39;*β
+    ξ[t] = delta(dat[t].s, dat[t].x, dat[t].ν, σ) - dat[t].x&#39;*β
   end
-  e=elasticity(β,σ,γ,x,ν,ξ)
-  dropdims(mean(e[:,1,:,:], dims=3), dims=3)
+  e=elasticity(β,σ,γ,dat,ξ)
+  avge = zeros(eltype(e[1]),size(e[1]))
+  # this assumes J is the same for all markets
+  for t in 1:T
+    avge .+= e[t]
+  end
+  avge /= T
+  avge[:,1,:]
 end
 
-price_elasticity = avg_price_elasticity(gel.β, gel.σ, gel.γ)</code></pre><p>Standard errors of elasticities and other quantities calculated from estimates can be calculated using the delta method.</p><pre><code class="language-">D = ForwardDiff.jacobian(θ-&gt;avg_price_elasticity(θ[1:K], θ[(K+1):(2K)], θ[(2K+1):end]), [gel.β;gel.σ;gel.γ])
+price_elasticity = avg_price_elasticity(gel.β, gel.σ, gel.γ, sim)</code></pre><p>Standard errors of elasticities and other quantities calculated from estimates can be calculated using the delta method.</p><pre><code class="language-">D = ForwardDiff.jacobian(θ-&gt;avg_price_elasticity(θ[1:K], θ[(K+1):(2K)], θ[(2K+1):end], dat), [gel.β;gel.σ;gel.γ])
 V = D*vgel.Σ*D&#39;
 se = reshape(sqrt.(diag(V)), size(price_elasticity))
 
@@ -306,4 +287,4 @@ for j in 1:J
     tbl[2j+1, l+1] = @sprintf(&quot;(%.3f)&quot;,se[j,l])
   end
 end
-pretty_table(tbl, noheader=true, formatter=ft_printf(&quot;%6.3f&quot;, 2:(J+1)))       </code></pre><p>The table above shows the estimated average elasticity of each good&#39;s share with respect to each good&#39;s price. Standard errors are in parentheses.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../functions/">Function Reference »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 6 February 2020 03:42">Thursday 6 February 2020</span>. Using Julia version 1.3.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+pretty_table(tbl, noheader=true, formatter=ft_printf(&quot;%6.3f&quot;, 2:(J+1)))       </code></pre><p>The table above shows the estimated average elasticity of each good&#39;s share with respect to each good&#39;s price. Standard errors are in parentheses.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../functions/">Function Reference »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 7 February 2020 01:19">Friday 7 February 2020</span>. Using Julia version 1.3.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
