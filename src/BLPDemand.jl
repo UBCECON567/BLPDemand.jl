@@ -4,7 +4,7 @@ using DataFrames: DataFrame
 import CSV
 import ForwardDiff
 import NLsolve
-using LinearAlgebra: dot, norm, Diagonal, inv, I
+using LinearAlgebra: dot, norm, Diagonal, inv, I, pinv
 using Optim
 using JuMP, Ipopt
 using Statistics: cov

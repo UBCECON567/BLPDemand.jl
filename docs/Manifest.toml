@@ -7,7 +7,7 @@ uuid = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
 version = "2.4.1"
 
 [[BLPDemand]]
-deps = ["CSV", "DataFrames", "ForwardDiff", "Ipopt", "JuMP", "LinearAlgebra", "NLsolve", "Optim"]
+deps = ["CSV", "DataFrames", "ForwardDiff", "Ipopt", "JuMP", "LinearAlgebra", "NLsolve", "Optim", "Statistics"]
 path = "/home/paul/.julia/dev/BLPDemand"
 uuid = "c9742c04-3141-4011-ba40-1120baaac28c"
 version = "0.1.0"

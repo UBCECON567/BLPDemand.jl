@@ -27,7 +27,7 @@ function demandmoments(β::AbstractVector,σ::AbstractVector,
     JT += length(ξ[t])
     moments .+= dat[t].zd*ξ[t]
   end
-  moments /= JT
+  moments /= T
 
   return(moments=moments, ξ=ξ)
 end
@@ -64,7 +64,7 @@ where `∂s/∂p` is the Jacobian of shares with respect to prices, but with the
 - `ξ` `J × T` matrix of market demand shocks
 - `dat::BLPData` 
 
-Returns `(moments, ω)` an `L` vector of moments with `moments[l] = 1/(JT) ∑ⱼ∑ₜ ω[t][j]*dat[t].zs[l,j]` 
+Returns `(moments, ω)` an `L` vector of moments with `moments[l] = 1/(T) ∑ₜ∑ⱼ ω[t][j]*dat[t].zs[l,j]` 
 """
 function supplymoments(γ::AbstractVector, β::AbstractVector, σ::AbstractVector,
                        ξ::AbstractVector, dat::BLPData)
@@ -85,7 +85,7 @@ function supplymoments(γ::AbstractVector, β::AbstractVector, σ::AbstractVecto
     moments .+= dat[t].zs*ω[t]
     JT += length(ω[t])
   end
-  moments ./= JT
+  moments ./= T
   return((moments=moments, ω=ω))
 end
 
@@ -104,29 +104,33 @@ firm.
 function makeivblp(x::AbstractMatrix, firmid=1:size(x,2))
   K,J = size(x)
   if length(firmid)==length(unique(firmid))
-    ivdemand = similar(x, 2*K, J)
+    ivdemand = similar(x, 3*K, J)
   else
-    ivdemand = similar(x, 3*K, J)    
+    ivdemand = similar(x, 4*K, J)    
   end
   ivdemand[1:K,:] .= x
-  for j in 1:J    
-    ivdemand[(K+1):(2*K),j] .= vec(sum(x[:,firmid[j] .!= firmid], dims=2))
-  end
-  if size(ivdemand,2)>=3*K
+  for j in 1:J
+    otherx=x[:,firmid[j] .!= firmid]
+    dx = otherx .- x[:,j]
+    ivdemand[(K+1):(2K),j] .= vec(sum(otherx, dims=2))
+    ivdemand[(2K+1):(3K),j] .= vec(sum( exp.(-(dx).^2), dims=2))
+  end  
+  if length(firmid)!=length(unique(firmid))
     for j in 1:J
-      ivdemand[(2*K+1):(3*K), j] .= vec(sum(x[:, firmid[j] .== firmid], dims=2)) .- x[:,j]
+      ivdemand[(3*K+1):(4*K), j] .= vec(sum(x[:, firmid[j] .== firmid], dims=2)) .- x[:,j]
     end
   end
   
   return(ivdemand)  
 end
 
+
 function makeivblp(x::Array{R, 3}, firmid=(1:size(x,2)) .* fill(1, size(x,3))') where R
   K,J,T = size(x)
   if size(firmid,1)==length(unique(firmid))
-    ivdemand = similar(x, 2*K, J, T)
+    ivdemand = similar(x, 3*K, J, T)
   else
-    ivdemand = similar(x, 3*K, J, T)    
+    ivdemand = similar(x, 4*K, J, T)    
   end
   for t in 1:T
     ivdemand[:,:,t] .= makeivblp(x[:,:,t], firmid[:,t])
@@ -245,7 +249,7 @@ function estimateRCIVlogit(dat::BLPData; method=:MPEC, verbose=true, W=I)
     
     Md = size(dat[1].zd,1)
     @expression(mod, moments[m in 1:Md],
-                sum( dot(ξ[t],dat[t].zd[m,:]) for t in 1:T)/JT)
+                sum( dot(ξ[t],dat[t].zd[m,:]) for t in 1:T)/T)
     @objective(mod, Min, T*moments'*W*moments);
     set_start_value.(mod[:β], β0)
     set_start_value.(mod[:σ], σ0)
@@ -308,7 +312,7 @@ function estimateRCIVlogit(dat::BLPData; method=:MPEC, verbose=true, W=I)
     for t in 1:T
       ξt = delta(dat[t].s, dat[t].x, dat[t].ν, start_value.(mod[:σ])) - dat[t].x'*start_value.(mod[:β])
       set_start_value.(ξ[t], ξt)
-      set_start_value.(p[t], 1/JT)
+      #set_start_value.(p[t], 1/T)
     end
     
     set_optimizer(mod,  with_optimizer(Ipopt.Optimizer,
@@ -341,7 +345,7 @@ Estimates a random coefficients BLP demand model
 # Details
 
 Uses `L` unconditional moments for estimation. The moments are
-`moments[l] = 1/(JT) ∑ⱼ∑ₜ (ξ[t][t]*dat[t].zd[l,j] + ω[t][j]*dat[t].zs[l,j])`
+`moments[l] = 1/(T) ∑ₜ∑ⱼ (ξ[t][t]*dat[t].zd[l,j] + ω[t][j]*dat[t].zs[l,j])`
 
 # Methods
 - `:NFXP` nested fixed point GMM. `minimize_θ G(δ(θ),θ)'W G(δ(θ),θ)`
@@ -436,11 +440,11 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I)
     
     Md = size(dat[1].zd,1)
     @expression(mod, md[m in 1:Md],
-                sum( (ξ[t][j]*dat[t].zd[m, j]) for t in 1:T, j in 1:size(dat[t].zd,2))/JT)
+                sum( (ξ[t][j]*dat[t].zd[m, j]) for t in 1:T, j in 1:size(dat[t].zd,2))/T)
     Ms=size(dat[1].zs,1)
     @expression(mod, ms[m in 1:Ms],
-                sum(ω[t][j]*dat[t].zs[m,j] for t in 1:T, j in 1:size(dat[t].zs,2))/JT)
-    @assert Md==Ms
+                sum(ω[t][j]*dat[t].zs[m,j] for t in 1:T, j in 1:size(dat[t].zs,2))/T)
+    @assert Md==Ms 
     M = Md #+ Ms
     @expression(mod, moments[m in 1:M], md[m] + ms[m]) #m <= Md ? md[m] : ms[m-Md])
     @objective(mod, Min, T*moments'*W*moments);
@@ -470,6 +474,7 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I)
     info = VariableInfo(false, NaN, false, NaN, false, NaN, false, NaN, false, false)
     ξ = Vector{Vector{JuMP.variable_type(mod)}}(undef, T)
     ω = Vector{Vector{JuMP.variable_type(mod)}}(undef, T)
+    p = Vector{Vector{JuMP.variable_type(mod)}}(undef, T)  
     JT = 0
     for t in 1:T
       J = length(dat[t].s)
@@ -477,9 +482,12 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I)
       S = size(dat[t].ν,2)
       ξ[t] = Vector{JuMP.variable_type(mod)}(undef,J)
       ω[t] = Vector{JuMP.variable_type(mod)}(undef,J)
+      p[t] = Vector{JuMP.variable_type(mod)}(undef,J)
       for j in 1:J
         ξ[t][j] = JuMP.add_variable(mod, build_variable(error, info), "ξ[$t][$j]")
         ω[t][j] = JuMP.add_variable(mod, build_variable(error, info), "ω[$t][$j]")
+        p[t][j] = JuMP.add_variable(mod, build_variable(error, info), "p[$t][$j]")
+        @constraint(mod, p[t][j] >= 0)
       end
       njit = @NLexpression(mod, [j in 1:J, i in 1:S], #exp(δi[j,i,t]))
                            exp(sum(dat[t].x[k,j]*β[k] for k in 1:K) + ξ[t][j] +
@@ -501,22 +509,23 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I)
     Ms=size(dat[1].zs,1)
     @assert Md==Ms
     M = Ms    
-    @variable(mod, p[1:T] ≥ 0)
+    #@variable(mod, p[1:T] ≥ 0)
     @constraint(mod, moments[m in 1:M],
-                0 == sum(p[t]*sum(ξ[t][j]*dat[t].zd[m,j] + ω[t][j].*dat[t].zs[m,j]
-                                  for j in 1:size(dat[t].zd,2))
+                0 == sum(sum(p[t][j]*(ξ[t][j]*dat[t].zd[m,j] + ω[t][j].*dat[t].zs[m,j])
+                             for j in 1:size(dat[t].zd,2))
                          for t in 1:T))
-    @NLobjective(mod, Max, sum(log(p[t]) for t in 1:T))
-    @constraint(mod, sum(p[t] for t in 1:T) <= 1)    
+    @NLobjective(mod, Max, sum( sum(log(p[t][j]) for j in 1:length(p[t])) for t in 1:T))
+    @constraint(mod, sum(sum(p[t][j] for j in 1:length(p[t])) for t in 1:T) <= 1)    
         set_start_value.(mod[:β], β0)
     set_start_value.(mod[:σ], σ0)
     set_start_value.(mod[:γ], 0)
-    set_start_value.(mod[:p], 1/T)
+    #set_start_value.(mod[:p], 1/T)
     # start from a feasible point
     for t in 1:T
       ξt = delta(dat[t].s, dat[t].x, dat[t].ν, start_value.(mod[:σ])) - dat[t].x'*start_value.(mod[:β])
       set_start_value.(ξ[t], ξt)
       set_start_value.(ω[t],0)
+      set_start_value.(p[t],1/JT)
     end
     
     set_optimizer(mod,  with_optimizer(Ipopt.Optimizer,
@@ -524,7 +533,7 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I)
                                        max_iter=1000))
     optimize!(mod)
     out = (β=value.(mod[:β]), σ=value.(mod[:σ]), γ=value.(mod[:γ]),
-           ξ=nothing, ω=nothing, p=value.(mod[:p]), opt=mod)
+           ξ=nothing, ω=nothing, opt=mod)
   else
     error("method $method not recognized")
   end
@@ -549,7 +558,7 @@ function varianceRCIVlogit(β, σ, dat::BLPData; W=I)
   @assert Md==Ms
   for t in 1:T
     for l in 1:Ms
-      mi[l, t] = dot(ξ[t],dat[t].zd[l,:])/length(ξ[t])
+      mi[l, t] = dot(ξ[t],dat[t].zd[l,:])
     end
   end
   V = cov(mi, dims=2)
@@ -557,7 +566,7 @@ function varianceRCIVlogit(β, σ, dat::BLPData; W=I)
   G = function(θ)
     β, σ  = unpack(θ)
     md, ξ = demandmoments(β,σ, dat)
-    md[:] 
+    return(md)
   end
   D = ForwardDiff.jacobian(G, θ)
   Ju = ForwardDiff.jacobian(θ->vcat(unpack(θ)...), θ)
@@ -583,7 +592,7 @@ function varianceBLP(β, σ, γ, dat::BLPData ; W=I)
   @assert Md==Ms
   for t in 1:T
     for l in 1:Ms
-      mi[l, t] = (dot(ξ[t],dat[t].zd[l,:]) + dot(ω[t],dat[t].zs[l,:]))/length(ξ[t])
+      mi[l, t] = (dot(ξ[t],dat[t].zd[l,:]) + dot(ω[t],dat[t].zs[l,:]))
     end
   end
   V = cov(mi, dims=2)
@@ -596,8 +605,8 @@ function varianceBLP(β, σ, γ, dat::BLPData ; W=I)
   end
   D = ForwardDiff.jacobian(G, θ)
   Ju = ForwardDiff.jacobian(θ->vcat(unpack(θ)...), θ)
-  Σ = Ju'*inv(D'*W*D)*(D'*W*V*W*D)*inv(D'*W*D)*Ju/T
-  return(Σ=Σ, varm=V)
+  Σ = Ju'*pinv(D'*W*D)*(D'*W*V*W*D)*pinv(D'*W*D)*Ju/T
+  return(Σ=Σ, varm=V, D=D, Ju=Ju, W=W, mi=mi)
 end
 
 
@@ -689,13 +698,15 @@ function optimalIV(β,σ, γ,
   end
   Z = hcat((d->[d.zd; d.zs]).(dat)...)'
   zstar = polyreg(Z,Z,Y, degree=degree)
-  out = deepcopy(dat)
+  out = Array{MarketData,1}(undef, length(dat))
   jt = 0
   for t in 1:length(dat)
     J = length(dat[t].s)
     M = size(zstar,2)÷2
-    out[t].zd .= zstar[jt .+ (1:J), 1:M]'
-    out[t].zs .= zstar[jt .+ (1:J), (M+1):end]'
+    out[t] = MarketData(dat[t].s, dat[t].x, dat[t].w, dat[t].firmid,
+                        zstar[jt .+ (1:J), 1:M]',
+                        zstar[jt .+ (1:J), (M+1):end]',
+                        dat[t].ν)
     jt += J
   end
   @assert jt==size(zstar,1)

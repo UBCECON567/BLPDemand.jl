@@ -7,14 +7,15 @@ of the model. The tests directory contains some additional examples.
 ## Generate Data
 
 ```@example sim
-using BLPDemand, Statistics, PrettyTables, Printf, Random
+using BLPDemand, Statistics, PrettyTables, Printf, Random, LinearAlgebra
 K = 3             # number of characteristics
 J = 5             # number of products
-S = 20            # draws of nu
+S = 10            # draws of nu
 T = 100           # number of markets
 β = ones(K)*2 
 β[1] = -1.5       # important for equilibrium that higher prices lower sales
-σ = ones(K)*0.2
+σ = ones(K)
+σ[1] = 0.2
 γ = ones(2)*0.3
 Random.seed!(984256)
 
@@ -83,9 +84,9 @@ efficiently weighted GMM.
 
 ```@example sim
 v = varianceBLP(gel.β, gel.σ, gel.γ, sim)
-vgel = varianceBLP(gel.β, gel.σ, gel.γ, sim)
+vgel = varianceBLP(gel.β, gel.σ, gel.γ, sim, W=inv(v.varm))
 
-f(v) = @sprintf("(%.2f)", sqrt(v))
+f(v) = @sprintf("(%.2f)", norm(sqrt(Complex(v))))
 vtbl = permutedims(hcat(tbl[1,:],
                         [hcat(tbl[i+1,:],
                               ["", "", f.([vnfxp.Σ[i,i], vmpec.Σ[i,i], vgel.Σ[i,i]])...])
@@ -127,8 +128,8 @@ values from this regression as ``f(z)`` results in much more precise
 estimates of ``\theta``. 
 
 ```@example sim
-sim=optimalIV(gel.β, max.(gel.σ, 0.1), # calculating optimal IV with σ near 0 gives poor peformance
-              gel.γ, sim);
+sim=optimalIV(mpec.β, max.(mpec.σ, 0.1), # calculating optimal IV with σ near 0 gives poor peformance
+              mpec.γ, sim, degree=3);
 nothing
 ```
 
@@ -144,7 +145,7 @@ vmpec = varianceBLP(mpec.β, mpec.σ, mpec.γ, sim)
 v = varianceBLP(gel.β, gel.σ, gel.γ, sim)
 vgel = varianceBLP(gel.β, gel.σ, gel.γ, sim, W=inv(v.varm))
 
-f(v) = @sprintf("(%.2f)", sqrt(v))
+f(v) = @sprintf("(%.2f)", norm(sqrt(Complex(v))))
 tbl = vcat(["" "True" "NFXP" "MPEC" "GEL"],
            [(i->"β[$i]").(1:length(β)) β nfxp.β mpec.β gel.β],
            [(i->"σ[$i]").(1:length(σ)) σ nfxp.σ mpec.σ gel.σ],
@@ -169,6 +170,8 @@ Using [`share`](@ref) and the `ForwardDiff.jl` package, we can
 calculate elasticities of demand with respect to each characteristic.
 
 ```@example sim
+using ForwardDiff
+
 function elasticity(β, σ, γ, dat, ξ)
   T = length(dat)
   K,J = size(dat[1].x)
@@ -204,15 +207,15 @@ function avg_price_elasticity(β,σ,γ, dat)
   avge[:,1,:]
 end
 
-price_elasticity = avg_price_elasticity(gel.β, gel.σ, gel.γ, sim)
+price_elasticity = avg_price_elasticity(mpec.β, mpec.σ, mpec.γ, sim)
 ```
 
 Standard errors of elasticities and other quantities calculated from
 estimates can be calculated using the delta method.
 
 ```@example sim
-D = ForwardDiff.jacobian(θ->avg_price_elasticity(θ[1:K], θ[(K+1):(2K)], θ[(2K+1):end], dat), [gel.β;gel.σ;gel.γ])
-V = D*vgel.Σ*D'
+D = ForwardDiff.jacobian(θ->avg_price_elasticity(θ[1:K], θ[(K+1):(2K)], θ[(2K+1):end], dat), [mpec.β;mpec.σ;mpec.γ])
+V = D*vmpec.Σ*D'
 se = reshape(sqrt.(diag(V)), size(price_elasticity))
 
 tbl = Array{Any, 2}(undef, 2J+1, J+1)
