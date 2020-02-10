@@ -28,7 +28,8 @@ export
   varianceBLP,
   optimalIV,
   MarketData,
-  BLPData
+  BLPData,
+  fracRCIVlogit
 
 
 include("data.jl")

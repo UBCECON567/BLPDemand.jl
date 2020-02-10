@@ -69,7 +69,13 @@ effects on efficiency).
 ## Inference
 
 [`varianceBLP`](@ref) computes the variance of the estimates produced
-by either of GMM estimation methods. 
+by either of GMM estimation methods.[^simdraws]
+
+[^simdraws:] The variance calculation ignores uncertainty from
+Monte-Carlo integration. For this to be valid, we must have the number
+of simulation draws grow faster than the sample size. In our notation,
+`S` is the number of simulation draws per observation, so it is
+sufficient at that ``S \to \infty`` as ``T \to \infty``.
 
 ```@example sim
 vnfxp = varianceBLP(nfxp.β, nfxp.σ, nfxp.γ, sim);
@@ -95,9 +101,9 @@ vtbl = permutedims(hcat(tbl[1,:],
 pretty_table(vtbl, noheader=true, formatter=ft_printf("%6.3f",3:5))
 ```
 
-As you can see, these standard errors are suspiciously large. It is
-possible that there is an error in the code, but I think the problem
-lies in the functional form of the unconditional instruments.
+These reusults look pretty good. In additional experiments (not shown) 
+the results were somewhat sensitive to the simulation design and
+choice of instruments (see [`makeivblp`](@ref)).
 
 ## Optimal Instruments
 
@@ -125,7 +131,15 @@ initial estimate of ``\theta``, computing ``\frac{\partial (\xi,
 \omega)}{\partial \theta}`` for each observation in the data, and then
 regressing this on a polynomial function of ``z``. Using the fitted
 values from this regression as ``f(z)`` results in much more precise
-estimates of ``\theta``. 
+estimates of ``\theta``.[^z]
+
+[^z]: The choice of `z` still matters when using `optimalIV.` For firm
+    `j`, the values of `x[2:end,l,t]` (for both `l=j` and `l != j`)
+    are all potential instruments for `x[1,j,t]`. However, `makeivblp`
+    does not use all of these. It instead uses their sum and the sum
+    of `exp(-(x[2:end,j,t] - x[2:end,l,t])^2)`. Adjusting these
+    choices might give better results.
+
 
 ```@example sim
 sim=optimalIV(mpec.β, max.(mpec.σ, 0.1), # calculating optimal IV with σ near 0 gives poor peformance
@@ -214,7 +228,7 @@ Standard errors of elasticities and other quantities calculated from
 estimates can be calculated using the delta method.
 
 ```@example sim
-D = ForwardDiff.jacobian(θ->avg_price_elasticity(θ[1:K], θ[(K+1):(2K)], θ[(2K+1):end], dat), [mpec.β;mpec.σ;mpec.γ])
+D = ForwardDiff.jacobian(θ->avg_price_elasticity(θ[1:K], θ[(K+1):(2K)], θ[(2K+1):end], sim), [mpec.β;mpec.σ;mpec.γ])
 V = D*vmpec.Σ*D'
 se = reshape(sqrt.(diag(V)), size(price_elasticity))
 

@@ -100,24 +100,31 @@ Instruments consist of exogenous product characteristics, sum of
 rivals exogenous characteristics, and, if there are any multi-product
 firms, sum of characteristics of other goods produced by the same
 firm.
+
+If includeexp is true, then also use 
+`sum(exp(-([x[2:end,j,t] - x[l,j,t])^2) for l in 1:J))`
+as instruments. 
 """
-function makeivblp(x::AbstractMatrix, firmid=1:size(x,2))
+function makeivblp(x::AbstractMatrix, firmid=1:size(x,2); includeexp=true)
   K,J = size(x)
   if length(firmid)==length(unique(firmid))
-    ivdemand = similar(x, 3*K, J)
+    ivdemand = similar(x, 2*K + K*includeexp, J)
   else
-    ivdemand = similar(x, 4*K, J)    
+    ivdemand = similar(x, 3*K + K*includeexp, J)    
   end
   ivdemand[1:K,:] .= x
   for j in 1:J
     otherx=x[:,firmid[j] .!= firmid]
     dx = otherx .- x[:,j]
     ivdemand[(K+1):(2K),j] .= vec(sum(otherx, dims=2))
-    ivdemand[(2K+1):(3K),j] .= vec(sum( exp.(-(dx).^2), dims=2))
-  end  
-  if length(firmid)!=length(unique(firmid))
+    if (includeexp)
+      ivdemand[(2K+1):(3K),j] .= vec(sum( exp.(-(dx).^2), dims=2))
+    end
+  end
+  S = 2*K + K*includeexp
+  if length(firmid)!=length(unique(firmid))    
     for j in 1:J
-      ivdemand[(3*K+1):(4*K), j] .= vec(sum(x[:, firmid[j] .== firmid], dims=2)) .- x[:,j]
+      ivdemand[(S+1):(S+K), j] .= vec(sum(x[:, firmid[j] .== firmid], dims=2)) .- x[:,j]
     end
   end
   
@@ -357,11 +364,11 @@ See also: [`optimalIV`](@ref), [`varianceBLP`](@ref), [`simulateBLP`](@ref)
 function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I)
   smalls = 1e-4
   if (minimum((d->minimum(d.s)).(dat)) < smalls)
-    @warn "There are $(sum(s .< smalls)) shares < $smalls."
+    @warn "There are shares < $smalls."
     @warn "Estimation may encounter numeric problems with small shares."
   end
   if (maximum((d->maximum(d.s)).(dat)) > 1.0 - smalls)
-    @warn "There are $(sum(s .> 1.0 - smalls)) shares > 1 - $smalls."
+    @warn "There are shares > 1 - $smalls."
     @warn "Estimation may encounter numeric problems with shares near 1."
   end
 
@@ -712,4 +719,36 @@ function optimalIV(β,σ, γ,
   @assert jt==size(zstar,1)
   @assert zstar ≈ hcat((d->[d.zd; d.zs]).(out)...)'
   return(out)
+end
+
+
+"""
+    fracblp(dat::BLPData)
+
+Estimate random coefficients IV model using "Fast, Robust, Approximately Correct" method of Salanie & Wolak (2019)
+"""
+function fracRCIVlogit(dat::BLPData)
+
+  T = length(dat)
+  K = size(dat[1].x,1)
+
+  # initial β from logit
+  Y = vcat((d->(log.(d.s) .- log(1 .- sum(d.s)))).(dat)...)
+  X = hcat( (d->d.x).(dat)...)
+  V = similar(X) # Salanie & Wolak's K
+  JT = 0
+  for t in 1:T
+    v = similar(dat[t].x)
+    for j in 1:size(dat[t].x,2)
+      v[:,j] .= (dat[t].x[:,j]./2 - dat[t].x*dat[t].s).*dat[t].x[:,j]
+    end
+    V[:, (JT+1):(JT+size(v,2))] .= v
+    JT = JT + size(v,2)
+  end
+  XK = vcat(X,V)    
+  Z = hcat( (d->d.zd).(dat)...)
+  xz=((Z*Z') \ Z*XK')'*Z
+  B = (xz*xz') \ xz*Y
+  
+  return(β=B[1:K], σ=B[(K+1):end])
 end

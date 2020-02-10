@@ -174,6 +174,7 @@ end
   @test isapprox(nfxp.β, mpec.β, rtol=eps(Float64)^(1/4))
   @test isapprox(nfxp.σ, mpec.σ, rtol=eps(Float64)^(1/4))
 
+  @show fracRCIVlogit(sim)
   
 end
 
@@ -181,16 +182,16 @@ end
 
   K = 3
   J = 5
-  S = 5
+  S = 10
   T = 100
   β = ones(K)*2
   β[1] = -1.5
-  σ = ones(K)*0.2
-  #σ[1] = 0.0
+  σ = ones(K)
+  σ[1] = 0.2
   γ = ones(2)*0.3
   
   sim, ξ, ω = simulateBLP(J,T, β, σ, γ, S, varξ=0.2, varω=0.2);
-
+  @show quantile(vcat((d->d.s[:]).(sim)...), [0, 0.05, 0.5, 0.95, 1]) 
   
   @time nfxp = estimateBLP(sim, method=:NFXP, verbose=true)
   @time mpec = estimateBLP(sim, method=:MPEC, verbose=true)
@@ -224,4 +225,5 @@ end
 
   
 end
+
 
