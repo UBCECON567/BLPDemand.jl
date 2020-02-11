@@ -112,7 +112,9 @@ function BLPData(df::DataFrame,
   dat = Array{MarketData,1}(undef, T)
   for t in 1:T
     i = findall(df[!,mid] .== tvals[t])
-    dat[t] = MarketData(df[i,s],df[i,x],df[i,w], df[i,firmid], df[i, zd], df[i, zs], ν[:,:,t])
+    dat[t] = MarketData(df[i,s],convert(Matrix,df[i,x])',convert(Matrix,df[i,w])',
+                        df[i,firmid], convert(Matrix,df[i, zd])', convert(Matrix,df[i, zs])',
+                        ν[:,:,t])
   end
   return(dat)
   

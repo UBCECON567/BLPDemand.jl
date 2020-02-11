@@ -105,7 +105,7 @@ If includeexp is true, then also use
 `sum(exp(-([x[2:end,j,t] - x[l,j,t])^2) for l in 1:J))`
 as instruments. 
 """
-function makeivblp(x::AbstractMatrix, firmid=1:size(x,2); includeexp=true)
+function makeivblp(x::AbstractMatrix; firmid=1:size(x,2), includeexp=true)
   K,J = size(x)
   if length(firmid)==length(unique(firmid))
     ivdemand = similar(x, 2*K + K*includeexp, J)
@@ -132,7 +132,7 @@ function makeivblp(x::AbstractMatrix, firmid=1:size(x,2); includeexp=true)
 end
 
 
-function makeivblp(x::Array{R, 3}, firmid=(1:size(x,2)) .* fill(1, size(x,3))') where R
+function makeivblp(x::Array{R, 3}; firmid=(1:size(x,2)) .* fill(1, size(x,3))', includeexp=true) where R
   K,J,T = size(x)
   if size(firmid,1)==length(unique(firmid))
     ivdemand = similar(x, 3*K, J, T)
@@ -140,23 +140,24 @@ function makeivblp(x::Array{R, 3}, firmid=(1:size(x,2)) .* fill(1, size(x,3))') 
     ivdemand = similar(x, 4*K, J, T)    
   end
   for t in 1:T
-    ivdemand[:,:,t] .= makeivblp(x[:,:,t], firmid[:,t])
+    ivdemand[:,:,t] .= makeivblp(x[:,:,t], firmid=firmid[:,t], includeexp=includeexp)
   end
   return(ivdemand)  
 end
 
 """ 
-    makeivblp!(dat::BLPData)
+    makeivblp(dat::BLPData; includeexp=true)
 
 Sets dat[:].zd and dat[:].zs to makeivblp([x[2:end,:] w])
 """
-function makeivblp!(dat::BLPData)
-  for t in 1:T
-    z = makeivblp(cat(dat[t].x[2:end,:], dat[t].w, dims=1))
-    dat[t].zd = z
-    dat[t].zs = z
+function makeivblp(dat::BLPData; includeexp=true)
+  out = deepcopy(dat)
+  for t in 1:length(dat)
+    z = makeivblp(cat(dat[t].x[2:end,:], dat[t].w, dims=1), firmid=dat[t].firmid, includeexp=includeexp)
+    out[t] =  MarketData(dat[t].s, dat[t].x, dat[t].w, dat[t].firmid,
+                        z, z, dat[t].ν)
   end
-  return(dat)
+  return(out)
 end
 
 
@@ -213,7 +214,7 @@ function estimateRCIVlogit(dat::BLPData; method=:MPEC, verbose=true, W=I)
   Y = vcat((d->(log.(d.s) .- log(1 .- sum(d.s)))).(dat)...)
   X = hcat( (d->d.x).(dat)...)
   Z = hcat( (d->d.zd).(dat)...)
-  xz=((Z*Z') \ Z*X')'*Z
+  xz=(pinv(Z*Z') * Z*X')'*Z
   β0 = (xz*xz') \ xz*Y
   
   if method==:NFXP
@@ -380,7 +381,7 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I)
   Y = vcat((d->(log.(d.s) .- log(1 .- sum(d.s)))).(dat)...)
   X = hcat( (d->d.x).(dat)...)
   Z = hcat( (d->d.zd).(dat)...)
-  xz=((Z*Z') \ Z*X')'*Z
+  xz=(pinv(Z*Z') * Z*X')'*Z
   β0 = (xz*xz') \ xz*Y
 
   # initial γ
@@ -578,7 +579,7 @@ function varianceRCIVlogit(β, σ, dat::BLPData; W=I)
   D = ForwardDiff.jacobian(G, θ)
   Ju = ForwardDiff.jacobian(θ->vcat(unpack(θ)...), θ)
   Σ = Ju'*inv(D'*W*D)*(D'*W*V*W*D)*inv(D'*W*D)*Ju/T
-  return(Σ=Σ, varm=V)
+  return(Σ=Σ, varm=V, D=D, Ju=Ju, W=W, mi=mi)
 end
 
 """
