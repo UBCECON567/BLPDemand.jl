@@ -21,27 +21,13 @@ License](http://creativecommons.org/licenses/by-sa/4.0/)
 ### About this document
 
 This document was created using Weave.jl. The code is available in
-[on github](https://github.com/ECON567/Dialysis). The same
+[on github](https://github.com/UBCECON567/BLPDemand.jl). The same
 document generates both static webpages and a [jupyter
-notebook.](dialysis.ipynb)
-
-$$
-\def\indep{\perp\!\!\!\perp}
-\def\Er{\mathrm{E}}
-\def\R{\mathbb{R}}
-\def\En{{\mathbb{E}_n}}
-\def\Pr{\mathrm{P}}
-\newcommand{\norm}[1]{\left\Vert {#1} \right\Vert}
-\newcommand{\abs}[1]{\left\vert {#1} \right\vert}
-\DeclareMathOperator*{\argmax}{arg\,max}
-\DeclareMathOperator*{\argmin}{arg\,min}
-\def\inprob{\,{\buildrel p \over \rightarrow}\,} 
-\def\indist{\,{\buildrel d \over \rightarrow}\,} 
-$$
+notebook.](replicateblp.ipynb)
 
 # Introduction
 
-This assigment will attempt to replicate the results of @berry1995.
+This assigment will attempt to replicate the results of [@berry1995].
 
 # Getting started
 
@@ -61,9 +47,9 @@ end
 
 # Problem 1: load and explore the data
 
-The data from @berry1995 is included in the `BLPDemand.jl`
+The data from [@berry1995] is included in the `BLPDemand.jl`
 package.
-```julia
+```julia; cache=true
 df = data_blp1999()
 
 # Optionally, if you like being able to view all your data
@@ -80,9 +66,9 @@ end
 ```
 
 Create some tables and figures to explore the data. You may want to
-reproduce table I and/or II from @berry1995.
+reproduce table I and/or II from [@berry1995].
 
-```julia
+```julia; cache=true
 # using Plots, DataFramesMeta, StatsPlots # (or whatever)
 
 ```
@@ -90,11 +76,11 @@ reproduce table I and/or II from @berry1995.
 # Problem 2: Logit Demand
 
 ## Part I
-Reproduce table III of @berry1995. First you'll need to create
+Reproduce table III of [@berry1995]. First you'll need to create
 instruments as in section 5.1 of the paper. The following code should
 do it.
 
-```julia
+```julia; cache=true
 using DataFrames
 # Create instruments (see section 5.1)
 exog = [:const, :hpwt, :air, :mpd, :space, :mpg, :trend] # not sure that this is correct set of variables
@@ -119,7 +105,7 @@ nothing
 
 For the regressions, you should modify the following.
 
-```julia
+```julia; cache=true
 using FixedEffectModels, RegressionTables
 col2 = reg(df, @formula(logit_depvar ~ hpwt + (price ~ const_own + const_other + hpwt_own + hpwt_other)))
 regtable(col2)
@@ -146,8 +132,7 @@ and `varianceRCIVlogit` from BLPDemand.jl. Note that the paper has
 price enter the model as $\log(y-p)$, but we lack data on $y$, so just
 have price enter linearly or log-linearly with a random coefficient.
 
-
-```julia
+```julia; cache=true
 # some more data prep. You might want to change
 df[!,:loghpwt] = log.(df[!,:hpwt])
 df[!,:logmpg] = log.(df[!,:mpg])

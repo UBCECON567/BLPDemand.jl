@@ -1,5 +1,5 @@
 using Revise
-using BLPDemand, Test, ForwardDiff, FiniteDiff, LinearAlgebra
+using BLPDemand, Test, ForwardDiff, FiniteDiff, LinearAlgebra, Statistics
 
 @testset "share and delta" begin
   K = 3
@@ -181,9 +181,9 @@ end
 @testset "estimate BLP" begin
 
   K = 3
-  J = 5
+  J = 100
   S = 10
-  T = 100
+  T = 20
   β = ones(K)*2
   β[1] = -1.5
   σ = ones(K)

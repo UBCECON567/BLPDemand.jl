@@ -1,17 +1,19 @@
 using Documenter, BLPDemand
 
 makedocs(;
-    modules=[BLPDemand],
-    format=Documenter.HTML(),
-    pages=[
-      "Home" => "index.md",
-      "Simulations" => "simulation.md",
-      "Function Reference" => "functions.md"
-    ],
-    repo="https://github.com/UBCECON567/BLPDemand.jl/blob/{commit}{path}#L{line}",
-    sitename="BLPDemand.jl",
-    authors="Paul Schrimpf <paul.schrimpf@gmail.com>",
-    #assets=String[],
+         modules=[BLPDemand],
+         format=Documenter.HTML(),
+         pages=[
+           "Home" => "index.md",
+           "Simulations" => "simulation.md",
+           "Function Reference" => "functions.md",
+           "Replicating BLP" => "replicateblp.md"
+         ],
+         repo="https://github.com/UBCECON567/BLPDemand.jl/blob/{commit}{path}#L{line}",
+         sitename="BLPDemand.jl",
+         authors="Paul Schrimpf <schrimpf@mail.ubc.ca>",
+         doctest=true
+         #assets=String[],
 )
 
 

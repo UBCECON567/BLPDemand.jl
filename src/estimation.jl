@@ -203,6 +203,9 @@ Estimates a random coefficients IV logit model.
 - `method=:MPEC` method for estimation. Available choices are :MPEC, :NFXP, or :GEL
 - `verbose=true` whether to display information about optimization progress
 - `W=I` weighting matrix
+
+Note that methods `:MPEC` and `:GEL` currently use a large amount of memory
+when `J` is large. `:NFXP` may be preferrable in this situation.
 """
 function estimateRCIVlogit(dat::BLPData; method=:MPEC, verbose=true, W=I)
   
@@ -359,6 +362,9 @@ Uses `L` unconditional moments for estimation. The moments are
 - `:NFXP` nested fixed point GMM. `minimize_θ G(δ(θ),θ)'W G(δ(θ),θ)`
 - `:MPEC` constrainted GMM. `minimize_{θ,Δ} G(Δ, θ)' W G(Δ, θ) s.t. Δ = δ(θ)`
 - `:GEL` constrained GEL `maximize_{p, θ, Δ} ∑ₜ log(p[t]) s.t. E_p[g(Δ, θ)] = 0 and Δ = δ(θ)`
+
+Note that `:MPEC` and `:GEL` currently use a large amount of memory
+when `J` is large. `:NFXP` may be preferrable in this situation.
 
 See also: [`optimalIV`](@ref), [`varianceBLP`](@ref), [`simulateBLP`](@ref)
 """
