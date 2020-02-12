@@ -59,7 +59,7 @@ if (false)
     using Blink
     w = Blink.window()
     body!(w, TableView.showtable(df));
-  else 
+  else  # this may work on a local installation of jupyter, but it doesn't on vse.syzygy.ca ...
     TableView.showtable(df);
   end
 end

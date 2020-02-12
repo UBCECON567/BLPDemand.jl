@@ -91,7 +91,7 @@ function eqprices(mc::AbstractVector,
 end
 
 """
-    function simulateBLP(J, T, β, σ, γ, S)  
+    function simulateBLP(J, T, β, σ, γ, S; varξ=1, varω=1, randj=1.0, firmid=1:J)
 
 Simulates a BLP demand and supply model.
 
@@ -103,6 +103,10 @@ Simulates a BLP demand and supply model.
 - `σ::AbstractVector` with `length(σ)=K`, standard deviation of tastes for characteristics
 - `γ::AbstractVector` marginal cost coefficients
 - `S` number of simulation draws to calculate market shares
+- `varξ=1` standard deviation of ξ
+- `varω=1` standard deviation of ω
+- `randj=1.0` if less than 1, then J is the maximum number of products per market. Each product is included in each market with probability randj
+- `firmid=1:J` firm identifiers. Must be length J. 
 
 # Returns 
 - `dat` a [`BLPData`](@ref) struct
@@ -110,30 +114,43 @@ Simulates a BLP demand and supply model.
 - `ω`
 """
 function simulateBLP(J, T, β::AbstractVector, σ::AbstractVector, γ::AbstractVector, S;
-                     varξ=1, varω=1)
+                     varξ=1, varω=1, randj=1.0, firmid=1:J)
   
   K = length(β)
-  x = rand(K, J, T)
-  ξ = randn(J,T)*varξ
   L = length(γ)
-  w = rand(L, J, T)
-  ν = randn(K, S, T)
-  ν[1,:,:] .= -rand(S,T) # make sure individuals price coefficients are negative
-  ω = randn(J,T)*varω
-  s = zeros(J,T)
-  p = zeros(J,T)
-
+  dat = Array{MarketData,1}(undef, T)
+  Ξ = Array{Vector,1}(undef,T)
+  Ω = Array{Vector,1}(undef,T)
   for t in 1:T
-    c = exp.(w[:,:,t]'*γ + ω[:,t])
-    p[:,t] .= eqprices(c, β, σ, ξ[:,t], x[2:end,:,t], ν[:,:,t])
+    Jt, fid = if randj < 1.0
+      inc = falses(J)
+      while sum(inc)==0
+        inc .= rand(J) .< randj
+      end
+      sum(inc), firmid[inc]
+    else
+      J, firmid
+    end
+    x = rand(K, Jt)
+    ξ = randn(Jt)*varξ
+    w = rand(L, Jt)
+    ν = randn(K, S)
+    ν[1,:] .= -rand(S) # make sure individuals' price coefficients are negative
+    ω = randn(Jt)*varω
 
-    x[1,:,t] .= p[:,t]
-    s[:,t] .= share(x[:,:,t]'*β+ξ[:,t], σ, x[:,:,t], ν[:,:,t])
+    c = exp.(w'*γ + ω)
+    p = eqprices(c, β, σ, ξ, x[2:end,:], ν, firmid=fid)
+
+    x[1,:] .= p
+    s = share(x'*β+ξ, σ, x, ν)
+    z = makeivblp(cat(x[2:end,:],w, dims=1), firmid=fid,
+                  forceown=(length(firmid)!=length(unique(firmid))))
+    dat[t] = MarketData(s, x, w, fid, z, z, ν)
+    Ξ[t] = ξ
+    Ω[t] = ω
   end
 
-  z = makeivblp(cat(x[2:end,:,:],w, dims=1))
-  
-  return(dat=BLPData(s, x, ν, z, w, z), ξ=[ξ[:,t] for t in 1:T], ω=[ω[:,t] for t in 1:T])
+  return(dat=dat, ξ=Ξ, ω=Ω)
   
 end
 

@@ -7,6 +7,7 @@ makedocs(;
            "Home" => "index.md",
            "Simulations" => "simulation.md",
            "Function Reference" => "functions.md",
+           "Developer Notes" => "implementation.md",
            "Replicating BLP" => "replicateblp.md"
          ],
          repo="https://github.com/UBCECON567/BLPDemand.jl/blob/{commit}{path}#L{line}",

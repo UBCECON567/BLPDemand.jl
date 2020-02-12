@@ -181,7 +181,7 @@ end
 @testset "estimate BLP" begin
 
   K = 3
-  J = 100
+  J = 50
   S = 10
   T = 20
   β = ones(K)*2
