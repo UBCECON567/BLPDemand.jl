@@ -532,7 +532,8 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I)
     #@show start_value.(p[1])
     set_optimizer(mod,  with_optimizer(Ipopt.Optimizer,
                                        print_level=5*verbose,
-                                       max_iter=1000))
+                                       max_iter=1000,
+                                       start_with_resto= (method==:MPEC ? "yes" : "no") ))
     optimize!(mod)
     out = (β=value.(mod[:β]), σ=value.(mod[:σ]), γ=value.(mod[:γ]),
            ξ=nothing, ω=nothing, opt=mod)

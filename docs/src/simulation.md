@@ -8,18 +8,18 @@ of the model. The tests directory contains some additional examples.
 
 ```@example sim
 using BLPDemand, Statistics, PrettyTables, Printf, Random, LinearAlgebra
-K = 3             # number of characteristics
-J = 5             # number of products
+K = 2             # number of characteristics
+J = 6             # number of products
 S = 10            # draws of nu
 T = 100           # number of markets
 β = ones(K)*2 
 β[1] = -1.5       # important for equilibrium that higher prices lower sales
 σ = ones(K)
 σ[1] = 0.2
-γ = ones(2)*0.3
-Random.seed!(984256)
+γ = ones(1)*0.1
+Random.seed!(98426)
 
-(sim, ξ, ω) = simulateBLP(J,T, β, σ, γ, S, varξ=0.2, varω=0.2)
+(sim, ξ, ω) = simulateBLP(J,T, β, σ, γ, S, varξ=0.2, varω=0.2);
 @show quantile(vcat((d->d.s[:]).(sim)...), [0, 0.05, 0.5, 0.95, 1])
 ```
 

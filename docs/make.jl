@@ -12,8 +12,8 @@ makedocs(;
          ],
          repo="https://github.com/UBCECON567/BLPDemand.jl/blob/{commit}{path}#L{line}",
          sitename="BLPDemand.jl",
-         authors="Paul Schrimpf <schrimpf@mail.ubc.ca>",
-         doctest=true
+         #doctest=false,
+         authors="Paul Schrimpf <schrimpf@mail.ubc.ca>"
          #assets=String[],
 )
 
