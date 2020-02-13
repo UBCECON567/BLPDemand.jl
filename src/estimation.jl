@@ -344,7 +344,7 @@ end
 
 
 """ 
-    estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I)
+    estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I, optimizer=Ipopt.Optimizer())
 
 
 Estimates a random coefficients BLP demand model
@@ -354,20 +354,57 @@ Estimates a random coefficients BLP demand model
 - `method=:MPEC` method for estimation. Available choices are :MPEC, :NFXP, or :GEL.
 - `verbose=true` whether to display information about optimization progress
 - `W=I` `L × L` weighting matrix for moments. 
+- `optimizer=(method==:NFXP ? LBFGS(linesearch=LineSearches.HagerZhang()) :
+                              with_optimizer(Ipopt.Optimizer,
+                                             max_iter= 100,
+                                             start_with_resto = "no",
+                                             print_level = 5*verbose))`
+   optimization method. See below for details.
+
 
 # Details
 
 Uses `L` unconditional moments for estimation. The moments are
 `moments[l] = 1/(T) ∑ₜ∑ⱼ (ξ[t][t]*dat[t].zd[l,j] + ω[t][j]*dat[t].zs[l,j])`
 
-# Methods
+## Methods
 - `:NFXP` nested fixed point GMM. `minimize_θ G(δ(θ),θ)'W G(δ(θ),θ)`
 - `:MPEC` constrainted GMM. `minimize_{θ,Δ} G(Δ, θ)' W G(Δ, θ) s.t. Δ = δ(θ)`
-- `:GEL` constrained GEL `maximize_{p, θ, Δ} ∑ₜ log(p[t]) s.t. E_p[g(Δ, θ)] = 0 and Δ = δ(θ)`
+- `:GEL` constrained empiricla likelihood 
+   `maximize_{p, θ, Δ} ∑ₜ log(p[t]) s.t. E_p[g(Δ, θ)] = 0 and Δ = δ(θ)`
+   For some models, there might be no feasible point for EL. This is
+   especially likely if the number of moments is large.
+
+## Optimizers
+
+If `method=:NFXP`, optimizer should be an unconstrained optimizer from
+the Optim.jl package. The default of `LBFGS()` is usually a good
+choice. `BFGS()` instead of `LBFGS()` and/or changing linesearch to
+`LineSearches.BackTracking()` are also worth trying.
+
+If `method=:MPEC` or `:GEL`, the optimizer must be comptible with JuMP
+and capable of solving nonliner problems. The default, `Ipopt`, will
+occassionally fail. If `verbose` is `true` and you repeatedly see
+warning messages from Ipopt, then it is likely that Ipopt will run
+for many iterations and eventually fail to converge. Changing Ipopt's
+`start_with_reso` option sometimes helps. For problems of the size
+seen in the docs or tests, when Ipopt succeeds, it generally does so
+in 100 or fewer iterations. Ipopt has many additional options, see
+[the Ipopt
+documentation](https://coin-or.github.io/Ipopt/OPTIONS.html) for a
+complete list.
+
 
 See also: [`optimalIV`](@ref), [`varianceBLP`](@ref), [`simulateBLP`](@ref)
 """
-function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I)
+function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I,
+                     optimizer=(method==:NFXP ? LBFGS(linesearch=LineSearches.HagerZhang()) :
+                                with_optimizer(Ipopt.Optimizer,
+                                               max_iter= 100,
+                                               start_with_resto = "no",
+                                               print_level = 5*verbose,
+                                               ))
+                     ) 
   smalls = 1e-4
   if (minimum((d->minimum(d.s)).(dat)) < smalls)
     @warn "There are shares < $smalls."
@@ -412,8 +449,8 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I)
         m = md[:] + ms[:]
         return(T*m'*W*m)
       end    
-    @show objectiveBLP(θ0)
-    opt = optimize(objectiveBLP, θ0, method=LBFGS(),show_trace=verbose, autodiff=:forward)
+    #@show objectiveBLP(θ0)
+    opt = optimize(objectiveBLP, θ0, method=optimizer, show_trace=verbose, autodiff=:forward)
     β, σ, γ = unpack(opt.minimizer)
     m, ξ = demandmoments(β,σ, dat)
     m, ω = supplymoments(γ, β, σ, ξ, dat)
@@ -426,7 +463,7 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I)
     @variable(mod, σ[1:K] ≥ 0)
     @variable(mod, γ[1:Kw])
     info = VariableInfo(false, NaN, false, NaN, false, NaN, false, NaN, false, false)
-    #pinfo = VariableInfo(true, 0, false, NaN, false, NaN, false, NaN, false, false)    
+    pinfo = VariableInfo(true, 0, false, NaN, false, NaN, false, NaN, false, false)    
     ξ = Vector{Vector{JuMP.variable_type(mod)}}(undef, T)
     ω = Vector{Vector{JuMP.variable_type(mod)}}(undef, T)
     p = Vector{Vector{JuMP.variable_type(mod)}}(undef, T*(method==:GEL))  
@@ -442,34 +479,35 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I)
         ξ[t][j] = JuMP.add_variable(mod, build_variable(error, info), "ξ[$t][$j]")
         ω[t][j] = JuMP.add_variable(mod, build_variable(error, info), "ω[$t][$j]")
         if (method==:GEL)
-          p[t][j] = JuMP.add_variable(mod, build_variable(error, info), "p[$t][$j]")
-          @constraint(mod, p[t][j] >= 0)
+          p[t][j] = JuMP.add_variable(mod, build_variable(error, pinfo), "p[$t][$j]")
+          #@constraint(mod, p[t][j] >= 0)
         end        
       end
       ujit = @variable(mod, [j in 1:J, i in 1:S], start=dat[t].x[:,j]'*(β0 + σ0.*dat[t].ν[:,i]))
       @constraint(mod, [j in 1:J, i in 1:S], ujit[j,i]==sum(dat[t].x[k,j]*(β[k] + σ[k]*dat[t].ν[k,i]) for k in 1:K) + ξ[t][j] ) 
       #njit = @NLexpression(mod, [j in 1:J, i in 1:S], exp(ujit[j,i]))
-      njit = @variable(mod, [j in 1:J, i in 1:S], start=1)
+      njit = @variable(mod, [j in 1:J, i in 1:S], start=1, lower_bound=0)
       @NLconstraint(mod, [j in 1:J, i in 1:S], njit[j,i] == exp(ujit[j,i]))
       #njit = @NLexpression(mod, [j in 1:J, i in 1:S], exp(ujit[j,i]))
       dit = @expression(mod, [i in 1:S], 1 + sum(njit[j,i] for j in 1:J))
-      sjit = @variable(mod, [j in 1:J, i in 1:S], start=dat[t].s[j])
+      sjit = @variable(mod, [j in 1:J, i in 1:S], start=dat[t].s[j]) #, lower_bound=0, upper_bound=1)
       @constraint(mod, [j in 1:J, i in 1:S], sjit[j,i]*dit[i] == njit[j,i])
       #sjit = @NLexpression(mod, [j in 1:J, i in 1:S], njit[j,i]/dit[i])
       @constraint(mod, [j in 1:J], dat[t].s[j] == sum(sjit[j,i] for i in 1:S)/S)
       #@NLconstraint(mod, [j in 1:J], dat[t].s[j] == sum(sjit[j,i] for i in 1:S)/S)
       #Λ = [@NLexpression(mod, sum(sjit[j,i]*(β[1]+σ[1]*dat[t].ν[1,i]) for i in 1:S)/S) for j in 1:J]
-      Λ = @variable(mod, [j in 1:J], start=1.0)
+      Λ = @variable(mod, [j in 1:J], start=dat[t].s[j]*(β0[1]+σ0[1]*sum(dat[t].ν[1,:])/S))
       @constraint(mod, [j in 1:J], Λ[j] == sum(sjit[j,i]*(β[1]+σ[1]*dat[t].ν[1,i]) for i in 1:S)/S)
       samefirm = [(dat[t].firmid[j]==dat[t].firmid[jj]) for j in 1:J, jj in 1:J]
-      Γ = @variable(mod, [j in 1:J, jj in findall(dat[t].firmid[j].==dat[t].firmid)], start=0)
+      Γ = @variable(mod, [j in 1:J, jj in findall(dat[t].firmid[j].==dat[t].firmid)],
+                    start=dat[t].s[j]*dat[t].s[jj]*(β0[1]+σ0[1]*sum(dat[t].ν[1,:])/S))
       @NLconstraint(mod, [j in 1:J, jj in findall(dat[t].firmid[j].==dat[t].firmid)],
                     Γ[j,jj] ==  sum(sjit[j,i]*sjit[jj,i]*(β[1]+σ[1]*dat[t].ν[1,i]) for i in 1:S)/S)
       #Γ = [@NLexpression(mod, 
       #                 samefirm[j,jj]*
       #                 sum(sjit[j,i]*sjit[jj,i]*(β[1]+σ[1]*dat[t].ν[1,i]) for i in 1:S)/S)
       #     for j in 1:J, jj in 1:J]
-      mc = @NLexpression(mod, [j in 1:J], exp(ω[t][j] + sum(dat[t].w[l,j]*γ[l] for l in 1:Kw)))
+      #mc = @NLexpression(mod, [j in 1:J], exp(ω[t][j] + sum(dat[t].w[l,j]*γ[l] for l in 1:Kw)))
       mc = @variable(mod, [j in 1:J], start=exp(0))
       @NLconstraint(mod, [j in 1:J], mc[j]==exp(ω[t][j] + sum(dat[t].w[l,j]*γ[l] for l in 1:Kw)))
       @constraint(mod, [j in 1:J], 0 == dat[t].s[j] + 
@@ -507,7 +545,7 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I)
     for t in 1:T
       ξt = delta(dat[t].s, dat[t].x, dat[t].ν, start_value.(mod[:σ])) - dat[t].x'*start_value.(mod[:β])
       set_start_value.(ξ[t], ξt)
-      set_start_value.(ω[t],ω0[t])
+      set_start_value.(ω[t], ω0[t])
     end
     if method==:GEL
       # gi = zeros(JT, M)
@@ -525,15 +563,12 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I)
       # i = 0
       for t in 1:length(dat)
         J = length(p[t])
-        set_start_value.(p[t], 1/(T*J)) #pstart[i .+ (1:J)])
+        set_start_value.(p[t], 1/T) #pstart[i .+ (1:J)])
         #i += J
       end
     end
     #@show start_value.(p[1])
-    set_optimizer(mod,  with_optimizer(Ipopt.Optimizer,
-                                       print_level=5*verbose,
-                                       max_iter=1000,
-                                       start_with_resto= (method==:MPEC ? "yes" : "no") ))
+    set_optimizer(mod,  optimizer)
     optimize!(mod)
     out = (β=value.(mod[:β]), σ=value.(mod[:σ]), γ=value.(mod[:γ]),
            ξ=nothing, ω=nothing, opt=mod)

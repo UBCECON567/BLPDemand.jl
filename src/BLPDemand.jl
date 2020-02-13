@@ -6,7 +6,9 @@ import ForwardDiff
 import NLsolve
 using LinearAlgebra: dot, norm, Diagonal, inv, I, pinv
 using Optim
-using JuMP, Ipopt
+import LineSearches
+using JuMP
+import Ipopt
 using Statistics: cov
 #import StatsBase
 #import StatsModels
