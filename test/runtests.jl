@@ -1,5 +1,5 @@
 using Revise
-using BLPDemand, Test, ForwardDiff, FiniteDiff, LinearAlgebra, Statistics
+using BLPDemand, Test, ForwardDiff, FiniteDiff, LinearAlgebra, Statistics, JuMP, Ipopt
 
 @testset "share and delta" begin
   K = 3
@@ -154,10 +154,10 @@ end
 @testset "estimate RC IV logit" begin
 
   K = 3
-  J = 2
+  J = 20
   S = 20
   T = 200
-  β = [1, -1, 1]
+  β = [1, -1, 1]*0.2
   σ = ones(K)*0.2
   ρ = 0.8
   π0 = zeros(2K,K,J)
@@ -166,10 +166,20 @@ end
     π0[K+k,k, :] .= -1
   end
   
-  sim = simulateIVRClogit(T, β, σ, π0, ρ, S, varξ=0.2);
+  sim = simulateIVRClogit(T, β, σ, π0, ρ, S, varξ=0.5);
+  @show quantile(vcat((d->d.s[:]).(sim)...), [0, 0.05, 0.5, 0.95, 1]) 
 
   @time nfxp = estimateRCIVlogit(sim, method=:NFXP, verbose=true)
+  @time n2 = estimateBLP(sim, method=:NFXP, verbose=true, supply=false)
   @time mpec = estimateRCIVlogit(sim, method=:MPEC, verbose=true)
+  @time m2 = estimateBLP(sim, method=:MPEC, verbose=true, supply=false,
+                         optimizer=with_optimizer(Ipopt.Optimizer,
+                                                   max_iter= 200,
+                                                   start_with_resto = "no",
+                                                   #hessian_approximation="limited-memory",
+                                                   #max_soc=10,
+                                                   #soc_method=0,
+                                                   print_level = 5))
   
   @test isapprox(nfxp.β, mpec.β, rtol=eps(Float64)^(1/4))
   @test isapprox(nfxp.σ, mpec.σ, rtol=eps(Float64)^(1/4))

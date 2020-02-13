@@ -206,10 +206,13 @@ Estimates a random coefficients IV logit model.
 - `verbose=true` whether to display information about optimization progress
 - `W=I` weighting matrix
 
-Note that methods `:MPEC` and `:GEL` currently use a large amount of memory
-when `J` is large. `:NFXP` may be preferrable in this situation. 
+Note that methods `:MPEC` and `:GEL` use a large amount of memory when
+the number of products is large. Either `method=:NFXP` or
+[`estimateBLP`](@ref) with `supply=false` should be used if the number
+of products is large.
 """
-function estimateRCIVlogit(dat::BLPData; method=:MPEC, verbose=true, W=I)
+function estimateRCIVlogit(dat::BLPData;
+method=:MPEC, verbose=true, W=I)
   
   T = length(dat)
   K = size(dat[1].x,1)
@@ -344,7 +347,7 @@ end
 
 
 """ 
-    estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I, optimizer=Ipopt.Optimizer())
+    estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I, optimizer=with_optimizer(Ipopt.Optimizer, start_with_resto="no"), supply=true)
 
 
 Estimates a random coefficients BLP demand model
@@ -360,7 +363,7 @@ Estimates a random coefficients BLP demand model
                                              start_with_resto = "no",
                                              print_level = 5*verbose))`
    optimization method. See below for details.
-
+- `supply=true` whether to include supply side moments
 
 # Details
 
@@ -374,6 +377,15 @@ Uses `L` unconditional moments for estimation. The moments are
    `maximize_{p, θ, Δ} ∑ₜ log(p[t]) s.t. E_p[g(Δ, θ)] = 0 and Δ = δ(θ)`
    For some models, there might be no feasible point for EL. This is
    especially likely if the number of moments is large.
+
+`supply=false` should give the same results as
+[`estimateRCIVlogit`](@ref). However, with `method=:MPEC` or `:GEL`,
+the formulation of the JuMP model differs, and so might the
+results. Generally, [`estimateRCIVlogit`](@ref) is faster for data
+with a small number of products, but scales very poorly as the number
+of products increases. See [the developer
+notes](https://ubcecon567.github.io/BLPDemand.jl/dev/implementation/)
+for more information.
 
 ## Optimizers
 
@@ -403,7 +415,8 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I,
                                                max_iter= 100,
                                                start_with_resto = "no",
                                                print_level = 5*verbose,
-                                               ))
+                                               )),
+                     supply = true
                      ) 
   smalls = 1e-4
   if (minimum((d->minimum(d.s)).(dat)) < smalls)
@@ -428,14 +441,16 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I,
 
   # initial γ
   γ0 = zeros(size(dat[1].w, 1))
-  m, ξ0 = demandmoments(β0, 0*σ0, dat)
-  m, logmc0 = supplymoments(γ0, β0, 0*σ0, ξ0, dat)
-  Y = vcat(logmc0...)
-  X = hcat((d->d.w).(dat)...)
-  γ0 = X' \ Y
-  ω0 = deepcopy(logmc0)
-  for t in 1:T
-    ω0[t] = logmc0[t] - dat[t].w'*γ0
+  ω0 = Vector{Vector}(undef, T)
+  if supply
+    m, ξ0 = demandmoments(β0, 0*σ0, dat)
+    m, logmc0 = supplymoments(γ0, β0, 0*σ0, ξ0, dat)
+    Y = vcat(logmc0...)
+    X = hcat((d->d.w).(dat)...)
+    γ0 = X' \ Y
+    for t in 1:T
+      ω0[t] = logmc0[t] - dat[t].w'*γ0
+    end
   end
   @show β0, σ0, γ0
   
@@ -445,15 +460,21 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I,
       function(θ)
         β, σ, γ = unpack(θ)
         md, ξ = demandmoments(β,σ, dat)
-        ms, ω = supplymoments(γ, β, σ, ξ, dat)
-        m = md[:] + ms[:]
+        m = md[:]
+        if supply
+          ms, ω = supplymoments(γ, β, σ, ξ, dat)
+          m .+= ms[:]
+        end
         return(T*m'*W*m)
       end    
     #@show objectiveBLP(θ0)
     opt = optimize(objectiveBLP, θ0, method=optimizer, show_trace=verbose, autodiff=:forward)
     β, σ, γ = unpack(opt.minimizer)
     m, ξ = demandmoments(β,σ, dat)
-    m, ω = supplymoments(γ, β, σ, ξ, dat)
+    ω = ω0
+    if supply
+      m, ω = supplymoments(γ, β, σ, ξ, dat)
+    end
     out = (β=β, σ=σ, γ=γ, ξ=ξ, ω=ω, opt=opt)
   elseif (method==:MPEC || method==:GEL)
     mod = Model()
@@ -461,7 +482,9 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I,
     Kw = size(dat[1].w,1)
     @variable(mod, β[1:K])
     @variable(mod, σ[1:K] ≥ 0)
-    @variable(mod, γ[1:Kw])
+    if supply
+      @variable(mod, γ[1:Kw])
+    end
     info = VariableInfo(false, NaN, false, NaN, false, NaN, false, NaN, false, false)
     pinfo = VariableInfo(true, 0, false, NaN, false, NaN, false, NaN, false, false)    
     ξ = Vector{Vector{JuMP.variable_type(mod)}}(undef, T)
@@ -473,11 +496,15 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I,
       JT += J
       S = size(dat[t].ν,2)
       ξ[t] = Vector{JuMP.variable_type(mod)}(undef,J)
-      ω[t] = Vector{JuMP.variable_type(mod)}(undef,J)
+      if supply
+        ω[t] = Vector{JuMP.variable_type(mod)}(undef,J)
+      end
       (method==:GEL) && (p[t] = Vector{JuMP.variable_type(mod)}(undef,J))
       for j in 1:J
         ξ[t][j] = JuMP.add_variable(mod, build_variable(error, info), "ξ[$t][$j]")
-        ω[t][j] = JuMP.add_variable(mod, build_variable(error, info), "ω[$t][$j]")
+        if supply
+          ω[t][j] = JuMP.add_variable(mod, build_variable(error, info), "ω[$t][$j]")
+        end
         if (method==:GEL)
           p[t][j] = JuMP.add_variable(mod, build_variable(error, pinfo), "p[$t][$j]")
           #@constraint(mod, p[t][j] >= 0)
@@ -494,58 +521,79 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I,
       @constraint(mod, [j in 1:J, i in 1:S], sjit[j,i]*dit[i] == njit[j,i])
       #sjit = @NLexpression(mod, [j in 1:J, i in 1:S], njit[j,i]/dit[i])
       @constraint(mod, [j in 1:J], dat[t].s[j] == sum(sjit[j,i] for i in 1:S)/S)
-      #@NLconstraint(mod, [j in 1:J], dat[t].s[j] == sum(sjit[j,i] for i in 1:S)/S)
-      #Λ = [@NLexpression(mod, sum(sjit[j,i]*(β[1]+σ[1]*dat[t].ν[1,i]) for i in 1:S)/S) for j in 1:J]
-      Λ = @variable(mod, [j in 1:J], start=dat[t].s[j]*(β0[1]+σ0[1]*sum(dat[t].ν[1,:])/S))
-      @constraint(mod, [j in 1:J], Λ[j] == sum(sjit[j,i]*(β[1]+σ[1]*dat[t].ν[1,i]) for i in 1:S)/S)
-      samefirm = [(dat[t].firmid[j]==dat[t].firmid[jj]) for j in 1:J, jj in 1:J]
-      Γ = @variable(mod, [j in 1:J, jj in findall(dat[t].firmid[j].==dat[t].firmid)],
-                    start=dat[t].s[j]*dat[t].s[jj]*(β0[1]+σ0[1]*sum(dat[t].ν[1,:])/S))
-      @NLconstraint(mod, [j in 1:J, jj in findall(dat[t].firmid[j].==dat[t].firmid)],
-                    Γ[j,jj] ==  sum(sjit[j,i]*sjit[jj,i]*(β[1]+σ[1]*dat[t].ν[1,i]) for i in 1:S)/S)
-      #Γ = [@NLexpression(mod, 
-      #                 samefirm[j,jj]*
-      #                 sum(sjit[j,i]*sjit[jj,i]*(β[1]+σ[1]*dat[t].ν[1,i]) for i in 1:S)/S)
-      #     for j in 1:J, jj in 1:J]
-      #mc = @NLexpression(mod, [j in 1:J], exp(ω[t][j] + sum(dat[t].w[l,j]*γ[l] for l in 1:Kw)))
-      mc = @variable(mod, [j in 1:J], start=exp(0))
-      @NLconstraint(mod, [j in 1:J], mc[j]==exp(ω[t][j] + sum(dat[t].w[l,j]*γ[l] for l in 1:Kw)))
-      @constraint(mod, [j in 1:J], 0 == dat[t].s[j] + 
-                  (dat[t].x[1,j]-mc[j])*Λ[j] - sum( (dat[t].x[1,jj] - mc[jj])*Γ[j,jj]
-                                                    for jj in findall(dat[t].firmid[j].==dat[t].firmid)) )
+
+      if supply
+        #@NLconstraint(mod, [j in 1:J], dat[t].s[j] == sum(sjit[j,i] for i in 1:S)/S)
+        #Λ = [@NLexpression(mod, sum(sjit[j,i]*(β[1]+σ[1]*dat[t].ν[1,i]) for i in 1:S)/S) for j in 1:J]
+        Λ = @variable(mod, [j in 1:J], start=dat[t].s[j]*(β0[1]+σ0[1]*sum(dat[t].ν[1,:])/S))
+        @constraint(mod, [j in 1:J], Λ[j] == sum(sjit[j,i]*(β[1]+σ[1]*dat[t].ν[1,i]) for i in 1:S)/S)
+        samefirm = [(dat[t].firmid[j]==dat[t].firmid[jj]) for j in 1:J, jj in 1:J]
+        Γ = @variable(mod, [j in 1:J, jj in findall(dat[t].firmid[j].==dat[t].firmid)],
+                      start=dat[t].s[j]*dat[t].s[jj]*(β0[1]+σ0[1]*sum(dat[t].ν[1,:])/S))
+        @NLconstraint(mod, [j in 1:J, jj in findall(dat[t].firmid[j].==dat[t].firmid)],
+                      Γ[j,jj] ==  sum(sjit[j,i]*sjit[jj,i]*(β[1]+σ[1]*dat[t].ν[1,i]) for i in 1:S)/S)
+        #Γ = [@NLexpression(mod, 
+        #                 samefirm[j,jj]*
+        #                 sum(sjit[j,i]*sjit[jj,i]*(β[1]+σ[1]*dat[t].ν[1,i]) for i in 1:S)/S)
+        #     for j in 1:J, jj in 1:J]
+        #mc = @NLexpression(mod, [j in 1:J], exp(ω[t][j] + sum(dat[t].w[l,j]*γ[l] for l in 1:Kw)))
+        mc = @variable(mod, [j in 1:J], start=exp(0))
+        @NLconstraint(mod, [j in 1:J], mc[j]==exp(ω[t][j] + sum(dat[t].w[l,j]*γ[l] for l in 1:Kw)))
+        @constraint(mod, [j in 1:J], 0 == dat[t].s[j] + 
+                    (dat[t].x[1,j]-mc[j])*Λ[j] - sum( (dat[t].x[1,jj] - mc[jj])*Γ[j,jj]
+                                                      for jj in findall(dat[t].firmid[j].==dat[t].firmid)) )
+      end
     end
     
     Md = size(dat[1].zd,1)
-    Ms=size(dat[1].zs,1)
-    @assert Md==Ms
+    if supply
+      Ms=size(dat[1].zs,1)
+      @assert Md==Ms
+    end
     M = Md 
     if method==:MPEC
       @variable(mod, moments[m in 1:M], start=0)
-      @constraint(mod, [m in 1:M], moments[m]==sum( (ξ[t][j]*dat[t].zd[m, j] +
-                                                     ω[t][j]*dat[t].zs[m,j])
-                                                    for t in 1:T, j in 1:size(dat[t].zd,2))/T)
-      #@expression(mod, md[m in 1:Md],
-      #            sum( (ξ[t][j]*dat[t].zd[m, j]) for t in 1:T, j in 1:size(dat[t].zd,2))/T)
-      #@expression(mod, ms[m in 1:Ms],
-      #            sum(ω[t][j]*dat[t].zs[m,j] for t in 1:T, j in 1:size(dat[t].zs,2))/T)
-      #@expression(mod, moments[m in 1:M], md[m] + ms[m]) #m <= Md ? md[m] : ms[m-Md])
+      if supply
+        @constraint(mod, [m in 1:M], moments[m]==sum( (ξ[t][j]*dat[t].zd[m, j] +
+                                                       ω[t][j]*dat[t].zs[m,j])
+                                                      for t in 1:T, j in 1:size(dat[t].zd,2))/T)
+      else
+        @constraint(mod, [m in 1:M], moments[m]==sum( (ξ[t][j]*dat[t].zd[m, j] )
+                                                      for t in 1:T, j in 1:size(dat[t].zd,2))/T)
+        #@expression(mod, moments[m in 1:Md],
+        #            sum( (ξ[t][j]*dat[t].zd[m, j]) for t in 1:T, j in 1:size(dat[t].zd,2))/T)
+        #@expression(mod, ms[m in 1:Ms],
+        #            sum(ω[t][j]*dat[t].zs[m,j] for t in 1:T, j in 1:size(dat[t].zs,2))/T)
+        #@expression(mod, moments[m in 1:M], md[m] + ms[m]) #m <= Md ? md[m] : ms[m-Md])
+      end
       @objective(mod, Min, T*moments'*W*moments);
     elseif method==:GEL
-      @constraint(mod, moment[m in 1:M],
-                  0 == sum(sum(p[t][j]*(ξ[t][j]*dat[t].zd[m,j] + ω[t][j].*dat[t].zs[m,j])
-                               for j in 1:size(dat[t].zd,2))
-                           for t in 1:T))
+      if supply 
+        @constraint(mod, moment[m in 1:M],
+                    0 == sum(sum(p[t][j]*(ξ[t][j]*dat[t].zd[m,j] + ω[t][j].*dat[t].zs[m,j])
+                                 for j in 1:size(dat[t].zd,2))
+                             for t in 1:T))
+      else
+        @constraint(mod, moment[m in 1:M],
+                    0 == sum(sum(p[t][j]*(ξ[t][j]*dat[t].zd[m,j])
+                                 for j in 1:size(dat[t].zd,2))
+                             for t in 1:T))
+      end
       @constraint(mod, sum(sum(p[t][j] for j in 1:length(p[t])) for t in 1:T) <= 1)    
       @NLobjective(mod, Max, sum( sum(log(p[t][j]) for j in 1:length(p[t])) for t in 1:T))
     end
     set_start_value.(mod[:β], β0)
     set_start_value.(mod[:σ], σ0)
-    set_start_value.(mod[:γ], γ0)
+    if supply 
+      set_start_value.(mod[:γ], γ0)
+    end
     # start from a feasible point
     for t in 1:T
       ξt = delta(dat[t].s, dat[t].x, dat[t].ν, start_value.(mod[:σ])) - dat[t].x'*start_value.(mod[:β])
       set_start_value.(ξ[t], ξt)
-      set_start_value.(ω[t], ω0[t])
+      if supply 
+        set_start_value.(ω[t], ω0[t])
+      end
     end
     if method==:GEL
       # gi = zeros(JT, M)
@@ -570,7 +618,8 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I,
     #@show start_value.(p[1])
     set_optimizer(mod,  optimizer)
     optimize!(mod)
-    out = (β=value.(mod[:β]), σ=value.(mod[:σ]), γ=value.(mod[:γ]),
+    γhat = supply ? value.(mod[:γ]) : zeros(0)    
+    out = (β=value.(mod[:β]), σ=value.(mod[:σ]), γ=γhat,
            ξ=nothing, ω=nothing, opt=mod)
   else
     error("method $method not recognized")
