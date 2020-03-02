@@ -205,6 +205,7 @@ Estimates a random coefficients IV logit model.
 - `method=:MPEC` method for estimation. Available choices are :MPEC, :NFXP, or :GEL
 - `verbose=true` whether to display information about optimization progress
 - `W=I` weighting matrix
+- `optimizer` see [`estimateBLP`](@ref) for details
 
 Note that methods `:MPEC` and `:GEL` use a large amount of memory when
 the number of products is large. Either `method=:NFXP` or
@@ -212,7 +213,13 @@ the number of products is large. Either `method=:NFXP` or
 of products is large.
 """
 function estimateRCIVlogit(dat::BLPData;
-method=:MPEC, verbose=true, W=I)
+                           method=:MPEC, verbose=true, W=I,
+                           optimizer=(method==:NFXP ? LBFGS(linesearch=LineSearches.HagerZhang()) :
+                                      with_optimizer(Ipopt.Optimizer,
+                                                     max_iter= 200,
+                                                     start_with_resto = "no",
+                                                     print_level = 5*verbose))
+                           )
   
   T = length(dat)
   K = size(dat[1].x,1)
@@ -234,7 +241,7 @@ method=:MPEC, verbose=true, W=I)
         return(T*m'*W*m)
       end    
     @show objectiveBLP(θ0)
-    opt = optimize(objectiveBLP, θ0, method=LBFGS(),show_trace=verbose, autodiff=:forward)
+    opt = optimize(objectiveBLP, θ0, method=optimizer,show_trace=verbose, autodiff=:forward)
     β, σ = unpack(opt.minimizer)
     m, ξ = demandmoments(β,σ, dat)
     out = (β=β, σ=σ, ξ=ξ, opt=opt)
@@ -274,9 +281,7 @@ method=:MPEC, verbose=true, W=I)
       ξt = delta(dat[t].s, dat[t].x, dat[t].ν, start_value.(mod[:σ])) - dat[t].x'*start_value.(mod[:β])
       set_start_value.(ξ[t], ξt)
     end
-    set_optimizer(mod,  with_optimizer(Ipopt.Optimizer,
-                                       print_level=5*verbose,
-                                       max_iter=1000))
+    set_optimizer(mod,  optimizer)
     optimize!(mod)
     out = (β=value.(mod[:β]), σ=value.(mod[:σ]), 
            ξ=nothing, opt=mod)
@@ -331,9 +336,7 @@ method=:MPEC, verbose=true, W=I)
       #set_start_value.(p[t], 1/T)
     end
     
-    set_optimizer(mod,  with_optimizer(Ipopt.Optimizer,
-                                       print_level=5*verbose,
-                                       max_iter=1000))
+    set_optimizer(mod,  optimizer)
     optimize!(mod)
     out = (β=value.(mod[:β]), σ=value.(mod[:σ]), 
            ξ=nothing, opt=mod)

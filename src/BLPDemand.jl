@@ -25,6 +25,7 @@ export
   simulateBLP,
   pack,
   estimateRCIVlogit,
+  varianceRCIVlogit,
   makeivblp,
   estimateBLP,
   varianceBLP,
