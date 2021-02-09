@@ -198,7 +198,9 @@ function delta(s::AbstractVector{T},
   #   @warn "Maximum iterations ($maxiter) reached"
   # end
   # return(s)
-  
+
+  #@show σ
+
   sol = try
     # Anderson acceleration (this is generally faster, but fails once in a while
     sol=NLsolve.fixedpoint(d->(d .+ log.(s) .- log.(share(d, σ, x, ν))),
@@ -209,10 +211,13 @@ function delta(s::AbstractVector{T},
     sol
   catch
     # fixed point iteration, always works, but takes more iterations
-    NLsolve.fixedpoint(d->(d .+ log.(s) .- log.(share(d, σ, x, ν))),
-                       log.(s) .- log.(1-sum(s)), 
-                       method = :anderson, m=0, xtol=tol, ftol=tol,
-                       iterations=maxiter, show_trace=false)
+    #println("trying fixed point")
+    sol = NLsolve.fixedpoint(d->(d .+ log.(s) .- log.(share(d, σ, x, ν))),
+                             log.(s) .- log.(1-sum(s)), 
+                             method = :anderson, m=0, xtol=tol, ftol=tol,
+                             iterations=maxiter, show_trace=false)
+    #(norm(share(sol.zero, σ, x, ν) - s)<tol) || error("bad sol")
+    sol
   end
   return(sol.zero)
 end

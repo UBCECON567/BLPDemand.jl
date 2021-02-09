@@ -91,7 +91,7 @@ function eqprices(mc::AbstractVector,
 end
 
 """
-    function simulateBLP(J, T, β, σ, γ, S; varξ=1, varω=1, randj=1.0, firmid=1:J)
+    function simulateBLP(J, T, β, σ, γ, S; varξ=1, varω=1, randj=1.0, firmid=1:J, costf=:log)
 
 Simulates a BLP demand and supply model.
 
@@ -114,7 +114,7 @@ Simulates a BLP demand and supply model.
 - `ω`
 """
 function simulateBLP(J, T, β::AbstractVector, σ::AbstractVector, γ::AbstractVector, S;
-                     varξ=1, varω=1, randj=1.0, firmid=1:J)
+                     varξ=1, varω=1, randj=1.0, firmid=1:J, costf=:log)
   
   K = length(β)
   L = length(γ)
@@ -138,7 +138,7 @@ function simulateBLP(J, T, β::AbstractVector, σ::AbstractVector, γ::AbstractV
     ν[1,:] .= -rand(S) # make sure individuals' price coefficients are negative
     ω = randn(Jt)*varω
 
-    c = exp.(w'*γ + ω)
+    c = costf == :log ? exp.(w'*γ + ω) : w'*γ + ω
     p = eqprices(c, β, σ, ξ, x[2:end,:], ν, firmid=fid)
 
     x[1,:] .= p

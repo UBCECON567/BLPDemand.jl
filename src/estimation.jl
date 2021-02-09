@@ -33,9 +33,10 @@ function demandmoments(β::AbstractVector,σ::AbstractVector,
 end
 
 function safelog(x)
-  δ = 1e-8
+  δ = 1e-20
   if (x<δ)
-    log(δ) + (δ-x)/δ
+    #println(x)
+    log(δ) + (δ-x)/δ - 1/(2*δ^2)*(δ - x)^2 
   else
     log(x)
   end
@@ -67,7 +68,8 @@ where `∂s/∂p` is the Jacobian of shares with respect to prices, but with the
 Returns `(moments, ω)` an `L` vector of moments with `moments[l] = 1/(T) ∑ₜ∑ⱼ ω[t][j]*dat[t].zs[l,j]` 
 """
 function supplymoments(γ::AbstractVector, β::AbstractVector, σ::AbstractVector,
-                       ξ::AbstractVector, dat::BLPData)
+                       ξ::AbstractVector, dat::BLPData;
+                       costf = safelog)
   T = length(ξ)
   K = length(β)
   M = size(dat[1].zs,1)
@@ -80,8 +82,17 @@ function supplymoments(γ::AbstractVector, β::AbstractVector, σ::AbstractVecto
     @views p = dat[t].x[1,:]
     @views s, Js, Λ, Γ = dsharedp(β, σ, p, dat[t].x[2:end,:], dat[t].ν, ξ[t])
     Js .= Js .* (dat[t].firmid.==dat[t].firmid')
-    mc = p + Js \ s
-    @views ω[t] = safelog.(mc) .- dat[t].w'*γ
+    mc = try
+      p + Js \ s
+    catch
+      #@show γ
+      #@show β
+      @show σ      
+      #@show size(Js), Λ
+      p +  diagm(Λ) \ s
+    end
+    #@views ω[t] = safelog.(mc) .- dat[t].w'*γ
+    @views ω[t] = costf.(mc) .- dat[t].w'*γ
     moments .+= dat[t].zs*ω[t]
     JT += length(ω[t])
   end
@@ -177,19 +188,22 @@ and
 pack(unpack(θ)) = θ
 ```
 """
+tran(x) = sqrt(x)
+itran(x) = (x*x)
+
 function pack(β::AbstractVector, σ::AbstractVector)
-  θ = vcat(β, log.(σ))
+  θ = vcat(tran(-β[1]), β[2:end], tran.(σ))
   K = length(β)
   unvec = let K=length(β)
-    θ->(β=θ[1:K], σ=exp.(θ[(K+1):(2*K)]))
+    θ->(β=[-itran(θ[1]); θ[2:K]], σ=itran.(θ[(K+1):(2*K)]))
   end
   (θ=θ, unpack=unvec)
 end
 
 function pack(β::AbstractVector, σ::AbstractVector, γ::AbstractVector)
-  θ = vcat(β, log.(σ), γ)
+  θ = vcat(tran(-β[1]), β[2:end], tran.(σ), γ)
   unvec = let K=length(β)
-    θ->(β=θ[1:K], σ=exp.(θ[(K+1):(2*K)]), γ=θ[(2*K+1):end])
+    θ->(β=[-itran(θ[1]); θ[2:K]], σ=itran.(θ[(K+1):(2*K)]), γ=θ[(2*K+1):end])
   end
   (θ=θ, unpack=unvec)
 end
@@ -205,7 +219,10 @@ Estimates a random coefficients IV logit model.
 - `method=:MPEC` method for estimation. Available choices are :MPEC, :NFXP, or :GEL
 - `verbose=true` whether to display information about optimization progress
 - `W=I` weighting matrix
+- `max_iter` optimizer iteration limit
 - `optimizer` see [`estimateBLP`](@ref) for details
+- `β0=nothing` initial value for β. If isnothing, then will try to automatically set
+- `σ0=nothing` initial value for σ. If isnothing, then will try to automatically set
 
 Note that methods `:MPEC` and `:GEL` use a large amount of memory when
 the number of products is large. Either `method=:NFXP` or
@@ -214,23 +231,30 @@ of products is large.
 """
 function estimateRCIVlogit(dat::BLPData;
                            method=:MPEC, verbose=true, W=I,
+                           max_iter = (method==:NFXP ? 1000 : 200),
                            optimizer=(method==:NFXP ? LBFGS(linesearch=LineSearches.HagerZhang()) :
                                       with_optimizer(Ipopt.Optimizer,
-                                                     max_iter= 200,
+                                                     max_iter= max_iter,
                                                      start_with_resto = "no",
-                                                     print_level = 5*verbose))
+                                                     print_level = 5*verbose)),
+                           β0 = nothing,
+                           σ0 = nothing
                            )
   
   T = length(dat)
   K = size(dat[1].x,1)
-  σ0 = ones(K)
-
+  if isnothing(σ0)
+    σ0 = ones(K)
+  end
+  
   # initial β from logit
-  Y = vcat((d->(log.(d.s) .- log(1 .- sum(d.s)))).(dat)...)
-  X = hcat( (d->d.x).(dat)...)
-  Z = hcat( (d->d.zd).(dat)...)
-  xz=(pinv(Z*Z') * Z*X')'*Z
-  β0 = (xz*xz') \ xz*Y
+  if isnothing(β0)
+    Y = vcat((d->(log.(d.s) .- log(1 .- sum(d.s)))).(dat)...)
+    X = hcat( (d->d.x).(dat)...)
+    Z = hcat( (d->d.zd).(dat)...)
+    xz=(pinv(Z*Z') * Z*X')'*Z
+    β0 = (xz*xz') \ xz*Y
+  end
   
   if method==:NFXP
     θ0, unpack = pack(β0, σ0)
@@ -241,7 +265,7 @@ function estimateRCIVlogit(dat::BLPData;
         return(T*m'*W*m)
       end    
     @show objectiveBLP(θ0)
-    opt = optimize(objectiveBLP, θ0, method=optimizer,show_trace=verbose, autodiff=:forward)
+    opt = optimize(objectiveBLP, θ0, method=optimizer,show_trace=verbose, autodiff=:forward, iterations=max_iter)
     β, σ = unpack(opt.minimizer)
     m, ξ = demandmoments(β,σ, dat)
     out = (β=β, σ=σ, ξ=ξ, opt=opt)
@@ -360,6 +384,7 @@ Estimates a random coefficients BLP demand model
 - `method=:MPEC` method for estimation. Available choices are :MPEC, :NFXP, or :GEL.
 - `verbose=true` whether to display information about optimization progress
 - `W=I` `L × L` weighting matrix for moments. 
+- `max_iter=200` number of iterations of optimizer
 - `optimizer=(method==:NFXP ? LBFGS(linesearch=LineSearches.HagerZhang()) :
                               with_optimizer(Ipopt.Optimizer,
                                              max_iter= 100,
@@ -367,7 +392,9 @@ Estimates a random coefficients BLP demand model
                                              print_level = 5*verbose))`
    optimization method. See below for details.
 - `supply=true` whether to include supply side moments
-
+- `β0=nothing` initial value for β. If isnothing, then will set automatically.
+- `σ0=nothing` initial value for σ. If isnothing, then will set automatically.
+- `γ0=nothing` initial value of γ. If isnothing, then will set automatically.
 # Details
 
 Uses `L` unconditional moments for estimation. The moments are
@@ -413,13 +440,18 @@ complete list.
 See also: [`optimalIV`](@ref), [`varianceBLP`](@ref), [`simulateBLP`](@ref)
 """
 function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I,
+                     max_iter = (method==:NFXP ? 1000 : 200),
                      optimizer=(method==:NFXP ? LBFGS(linesearch=LineSearches.HagerZhang()) :
                                 with_optimizer(Ipopt.Optimizer,
-                                               max_iter= 100,
+                                               max_iter= max_iter,
                                                start_with_resto = "no",
                                                print_level = 5*verbose,
                                                )),
-                     supply = true
+                     supply = true,
+                     β0 = nothing,
+                     σ0 = nothing,
+                     γ0 = nothing,
+                     costf = :log
                      ) 
   smalls = 1e-4
   if (minimum((d->minimum(d.s)).(dat)) < smalls)
@@ -433,29 +465,39 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I,
 
   T = length(dat)
   K = size(dat[1].x,1)
-  σ0 = ones(K)
-
+  if isnothing(σ0)
+    σ0 = ones(K)*0.05
+  end
+  
   # initial β from logit
-  Y = vcat((d->(log.(d.s) .- log(1 .- sum(d.s)))).(dat)...)
-  X = hcat( (d->d.x).(dat)...)
-  Z = hcat( (d->d.zd).(dat)...)
-  xz=(pinv(Z*Z') * Z*X')'*Z
-  β0 = (xz*xz') \ xz*Y
+  if isnothing(β0)
+    Y = vcat((d->(log.(d.s) .- log(1 .- sum(d.s)))).(dat)...)
+    X = hcat( (d->d.x).(dat)...)
+    Z = hcat( (d->d.zd).(dat)...)
+    xz=(pinv(Z*Z') * Z*X')'*Z
+    β0 = (xz*xz') \ xz*Y
+  end
 
   # initial γ
-  γ0 = zeros(size(dat[1].w, 1))
+  resetγ=false
+  if isnothing(γ0)
+    γ0 = zeros(size(dat[1].w, 1))
+    resetγ = true
+  end
   ω0 = Vector{Vector}(undef, T)
   if supply
     m, ξ0 = demandmoments(β0, 0*σ0, dat)
-    m, logmc0 = supplymoments(γ0, β0, 0*σ0, ξ0, dat)
-    Y = vcat(logmc0...)
-    X = hcat((d->d.w).(dat)...)
-    γ0 = X' \ Y
+    m, logmc0 = supplymoments(γ0, β0, 0*σ0, ξ0, dat, costf = costf==:log ? safelog : x->x)
+    if resetγ
+      Y = vcat(logmc0...)
+      X = hcat((d->d.w).(dat)...)
+      γ0 = X' \ Y
+    end
     for t in 1:T
       ω0[t] = logmc0[t] - dat[t].w'*γ0
     end
   end
-  @show β0, σ0, γ0
+  #@show β0, σ0, γ0
   
   if method==:NFXP
     θ0, unpack = pack(β0, σ0, γ0)
@@ -465,18 +507,18 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I,
         md, ξ = demandmoments(β,σ, dat)
         m = md[:]
         if supply
-          ms, ω = supplymoments(γ, β, σ, ξ, dat)
+          ms, ω = supplymoments(γ, β, σ, ξ, dat, costf = costf==:log ? safelog : x->x)
           m .+= ms[:]
         end
         return(T*m'*W*m)
       end    
     #@show objectiveBLP(θ0)
-    opt = optimize(objectiveBLP, θ0, method=optimizer, show_trace=verbose, autodiff=:forward)
+    opt = optimize(objectiveBLP, θ0, method=optimizer, show_trace=verbose, autodiff=:forward, iterations=max_iter)
     β, σ, γ = unpack(opt.minimizer)
     m, ξ = demandmoments(β,σ, dat)
     ω = ω0
     if supply
-      m, ω = supplymoments(γ, β, σ, ξ, dat)
+      m, ω = supplymoments(γ, β, σ, ξ, dat, costf = costf==:log ? safelog : x->x)
     end
     out = (β=β, σ=σ, γ=γ, ξ=ξ, ω=ω, opt=opt)
   elseif (method==:MPEC || method==:GEL)
@@ -540,8 +582,14 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I,
         #                 sum(sjit[j,i]*sjit[jj,i]*(β[1]+σ[1]*dat[t].ν[1,i]) for i in 1:S)/S)
         #     for j in 1:J, jj in 1:J]
         #mc = @NLexpression(mod, [j in 1:J], exp(ω[t][j] + sum(dat[t].w[l,j]*γ[l] for l in 1:Kw)))
-        mc = @variable(mod, [j in 1:J], start=exp(0))
-        @NLconstraint(mod, [j in 1:J], mc[j]==exp(ω[t][j] + sum(dat[t].w[l,j]*γ[l] for l in 1:Kw)))
+        if (costf==:log)
+          mc = @variable(mod, [j in 1:J], start=exp(0))
+          @NLconstraint(mod, [j in 1:J], mc[j]==exp(ω[t][j] + sum(dat[t].w[l,j]*γ[l] for l in 1:Kw)))
+        else
+          mc = @variable(mod, [j in 1:J], start=0)
+          #mc = @expression(mod, [j in 1:J], ω[t][j] + sum(dat[t].w[l,j]*γ[l] for l in 1:Kw))
+          @constraint(mod, [j in 1:J], mc[j]==ω[t][j] + sum(dat[t].w[l,j]*γ[l] for l in 1:Kw))          
+        end
         @constraint(mod, [j in 1:J], 0 == dat[t].s[j] + 
                     (dat[t].x[1,j]-mc[j])*Λ[j] - sum( (dat[t].x[1,jj] - mc[jj])*Γ[j,jj]
                                                       for jj in findall(dat[t].firmid[j].==dat[t].firmid)) )
@@ -556,14 +604,19 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I,
     M = Md 
     if method==:MPEC
       @variable(mod, moments[m in 1:M], start=0)
+      #@expression(mod, md[m in 1:Md],
+      #           sum( (ξ[t][j]*dat[t].zd[m, j]) for t in 1:T, j in 1:size(dat[t].zd,2))/T)
       if supply
+        #@expression(mod, ms[m in 1:Ms],
+        #            sum(ω[t][j]*dat[t].zs[m,j] for t in 1:T, j in 1:size(dat[t].zs,2))/T)
+        #@expression(mod, moments[m in 1:M], md[m] + ms[m]) #m <= Md ? md[m] : ms[m-Md])
         @constraint(mod, [m in 1:M], moments[m]==sum( (ξ[t][j]*dat[t].zd[m, j] +
                                                        ω[t][j]*dat[t].zs[m,j])
                                                       for t in 1:T, j in 1:size(dat[t].zd,2))/T)
       else
         @constraint(mod, [m in 1:M], moments[m]==sum( (ξ[t][j]*dat[t].zd[m, j] )
                                                       for t in 1:T, j in 1:size(dat[t].zd,2))/T)
-        #@expression(mod, moments[m in 1:Md],
+        #@expression(mod, md[m in 1:Md],
         #            sum( (ξ[t][j]*dat[t].zd[m, j]) for t in 1:T, j in 1:size(dat[t].zd,2))/T)
         #@expression(mod, ms[m in 1:Ms],
         #            sum(ω[t][j]*dat[t].zs[m,j] for t in 1:T, j in 1:size(dat[t].zs,2))/T)
@@ -786,12 +839,12 @@ approximates the optimal instruments with a polynomial regression of `degree` of
 `∂e/∂θ` on `z`. Returns BLPData with instruments set to fitted values `(zd, zs) = (E[∂ξ/∂θ|z], E[∂ω/∂θ|z])`  
 """
 function optimalIV(β,σ, γ, 
-                   dat::BLPData; degree=2)
+                   dat::BLPData; degree=2, costf=:log)
   θ, unpack = pack(β,σ, γ)
   ei = function(θ)
     β, σ, γ = unpack(θ)
     md, ξ = demandmoments(β,σ, dat)
-    ms, ω = supplymoments(γ, β, σ, ξ, dat)
+    ms, ω = supplymoments(γ, β, σ, ξ, dat, costf=costf==:log ? safelog : x->x)
     hcat(vcat(ξ...), vcat(ω...))
   end
   e = ei(θ)
@@ -845,7 +898,7 @@ function fracRCIVlogit(dat::BLPData)
   end
   XK = vcat(X,V)    
   Z = hcat( (d->d.zd).(dat)...)
-  xz=((Z*Z') \ Z*XK')'*Z
+  xz=(pinv(Z*Z') * Z*XK')'*Z
   B = (xz*xz') \ xz*Y
   
   return(β=B[1:K], σ=B[(K+1):end])

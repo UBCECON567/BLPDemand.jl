@@ -4,7 +4,7 @@ using DataFrames: DataFrame
 import CSV
 import ForwardDiff
 import NLsolve
-using LinearAlgebra: dot, norm, Diagonal, inv, I, pinv
+using LinearAlgebra: dot, norm, Diagonal, inv, I, pinv, rank, diagm
 using Optim
 import LineSearches
 using JuMP
@@ -39,5 +39,6 @@ include("data.jl")
 include("share.jl")
 include("estimation.jl")
 include("simulate.jl")
+include("bayes.jl")
 
 end # module
