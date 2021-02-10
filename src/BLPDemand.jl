@@ -13,7 +13,7 @@ using Statistics: cov
 #import StatsBase
 #import StatsModels
 
-export 
+export
   data_blp1999,
   share,
   sharep, dsharedp,
@@ -39,6 +39,6 @@ include("data.jl")
 include("share.jl")
 include("estimation.jl")
 include("simulate.jl")
-include("bayes.jl")
+#include("bayes.jl")
 
 end # module
