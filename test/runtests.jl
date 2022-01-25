@@ -106,7 +106,7 @@ end
   # check alternate form of FOC holds
   s, ds, Λ, Γ = dsharedp(β, σ, p, x, ν, ξ)
   samefirm = ((1:J).==(1:J)')
-  @test mc ≈ p .+ (samefirm.*ds) \ s
+  @test isapprox(mc, p .+ (samefirm.*ds) \ s, rtol=eps(eltype(mc))^(1/4))
 
 end
 
@@ -154,8 +154,8 @@ end
 @testset "estimate RC IV logit" begin
 
   K = 3
-  J = 20
-  S = 20
+  J = 5
+  S = 10
   T = 200
   β = [-1, 1, 1]*0.2
   σ = ones(K)*0.2
@@ -183,7 +183,12 @@ end
 
   @test isapprox(nfxp.β, mpec.β, rtol=eps(Float64)^(1/4))
   @test isapprox(nfxp.σ, mpec.σ, rtol=eps(Float64)^(1/4))
+  @test isapprox(n2.β, nfxp.β, rtol=eps(Float64)^(1/4))
+  @test isapprox(n2.σ, nfxp.σ, rtol=eps(Float64)^(1/4))
+  @test isapprox(n2.β, m2.β, rtol=eps(Float64)^(1/4))
+  @test isapprox(n2.σ, m2.σ, rtol=eps(Float64)^(1/4))
 
+  
   @show fracRCIVlogit(sim)
 
 end

@@ -276,13 +276,13 @@ function estimateRCIVlogit(dat::BLPData;
     @variable(mod, β[1:K])
     @variable(mod, σ[1:K] ≥ 0)
     info = VariableInfo(false, NaN, false, NaN, false, NaN, false, NaN, false, false)
-    ξ = Vector{Vector{JuMP.variable_type(mod)}}(undef, T)
+    ξ = Vector{typeof(β)}(undef, T)
     JT = 0
     for t in 1:T
       J = length(dat[t].s)
       JT += J
       S = size(dat[t].ν,2)
-      ξ[t] = Vector{JuMP.variable_type(mod)}(undef,J)
+      ξ[t] = typeof(β)(undef,J)
       for j in 1:J
         ξ[t][j] = JuMP.add_variable(mod, build_variable(error, info), "ξ[$t][$j]")
       end
@@ -316,15 +316,15 @@ function estimateRCIVlogit(dat::BLPData;
     @variable(mod, β[1:K])
     @variable(mod, σ[1:K] ≥ 0)
     info = VariableInfo(false, NaN, false, NaN, false, NaN, false, NaN, false, false)
-    ξ = Vector{Vector{JuMP.variable_type(mod)}}(undef, T)
-    #p = Vector{Vector{JuMP.variable_type(mod)}}(undef, T)
+    ξ = Vector{typeof(β)}(undef, T)
+    #p = Vector{typeof(β)}(undef, T)
     JT = 0
     for t in 1:T
       J = length(dat[t].s)
       JT += J
       S = size(dat[t].ν,2)
-      ξ[t] = Vector{JuMP.variable_type(mod)}(undef,J)
-      #p[t] = Vector{JuMP.variable_type(mod)}(undef,J)
+      ξ[t] = typeof(β)(undef,J)
+      #p[t] = typeof(β)(undef,J)
       for j in 1:J
         ξ[t][j] = JuMP.add_variable(mod, build_variable(error, info), "ξ[$t][$j]")
         #p[t][j] = JuMP.add_variable(mod, build_variable(error, info), "p[$t][$j]")
@@ -532,19 +532,19 @@ function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I,
     end
     info = VariableInfo(false, NaN, false, NaN, false, NaN, false, NaN, false, false)
     pinfo = VariableInfo(true, 0, false, NaN, false, NaN, false, NaN, false, false)    
-    ξ = Vector{Vector{JuMP.variable_type(mod)}}(undef, T)
-    ω = Vector{Vector{JuMP.variable_type(mod)}}(undef, T)
-    p = Vector{Vector{JuMP.variable_type(mod)}}(undef, T*(method==:GEL))  
+    ξ = Vector{typeof(β)}(undef, T)
+    ω = Vector{typeof(β)}(undef, T)
+    p = Vector{typeof(β)}(undef, T*(method==:GEL))  
     JT = 0
     for t in 1:T
       J = length(dat[t].s)
       JT += J
       S = size(dat[t].ν,2)
-      ξ[t] = Vector{JuMP.variable_type(mod)}(undef,J)
+      ξ[t] = typeof(β)(undef,J)
       if supply
-        ω[t] = Vector{JuMP.variable_type(mod)}(undef,J)
+        ω[t] = typeof(β)(undef,J)
       end
-      (method==:GEL) && (p[t] = Vector{JuMP.variable_type(mod)}(undef,J))
+      (method==:GEL) && (p[t] = typeof(β)(undef,J))
       for j in 1:J
         ξ[t][j] = JuMP.add_variable(mod, build_variable(error, info), "ξ[$t][$j]")
         if supply

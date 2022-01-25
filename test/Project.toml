@@ -1,5 +1,4 @@
 [deps]
-BLPDemand = "c9742c04-3141-4011-ba40-1120baaac28c"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 FiniteDiff = "6a86dc24-6348-571c-b903-95158fe2bd41"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
