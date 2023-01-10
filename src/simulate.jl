@@ -29,7 +29,7 @@ function simulateIVRClogit(T, β, σ, π, ρ, S; varξ=1)
   for t in 1:T
     @views s[:,t] .= share(x[:,:,t]'*β+ξ[:,t], σ, x[:,:,t], ν[:,:,t])
   end
-  return(BLPData(s, x, ν, z))
+  return(blpdata(s, x, ν, z))
 end
 
 

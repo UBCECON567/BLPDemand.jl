@@ -87,9 +87,8 @@ function supplymoments(γ::AbstractVector, β::AbstractVector, σ::AbstractVecto
     catch
       #@show γ
       #@show β
-      @show σ      
       #@show size(Js), Λ
-      p +  diagm(Λ) \ s
+      p +  Λ \ s
     end
     #@views ω[t] = safelog.(mc) .- dat[t].w'*γ
     @views ω[t] = costf.(mc) .- dat[t].w'*γ
@@ -164,7 +163,7 @@ Sets dat[:].zd and dat[:].zs to makeivblp([x[2:end,:] w])
 """
 function makeivblp(dat::BLPData; includeexp=true, forceown=false)
   out = deepcopy(dat)
-  for t in 1:length(dat)
+  for t in eachindex(dat)
     z = makeivblp(cat(dat[t].x[2:end,:], dat[t].w, dims=1), firmid=dat[t].firmid,
                   includeexp=includeexp, forceown=forceown)
     out[t] =  MarketData(dat[t].s, dat[t].x, dat[t].w, dat[t].firmid,
@@ -188,22 +187,22 @@ and
 pack(unpack(θ)) = θ
 ```
 """
-tran(x) = sqrt(x)
-itran(x) = (x*x)
+tran(x; lb=zero(x)) = sqrt(x - lb)
+itran(x; lb=zero(x)) = (x*x) + lb
 
-function pack(β::AbstractVector, σ::AbstractVector)
-  θ = vcat(tran(-β[1]), β[2:end], tran.(σ))
+function pack(β::AbstractVector, σ::AbstractVector; lb=1e-2)
+  θ = vcat(tran(-β[1]), β[2:end], tran.(σ,lb=lb))
   K = length(β)
   unvec = let K=length(β)
-    θ->(β=[-itran(θ[1]); θ[2:K]], σ=itran.(θ[(K+1):(2*K)]))
+    θ->(β=[-itran(θ[1]); θ[2:K]], σ=itran.(θ[(K+1):(2*K)], lb=lb))
   end
   (θ=θ, unpack=unvec)
 end
 
-function pack(β::AbstractVector, σ::AbstractVector, γ::AbstractVector)
-  θ = vcat(tran(-β[1]), β[2:end], tran.(σ), γ)
+function pack(β::AbstractVector, σ::AbstractVector, γ::AbstractVector; lb=1e-2)
+  θ = vcat(tran(-β[1]), β[2:end], tran.(σ, lb=lb), γ)
   unvec = let K=length(β)
-    θ->(β=[-itran(θ[1]); θ[2:K]], σ=itran.(θ[(K+1):(2*K)]), γ=θ[(2*K+1):end])
+    θ->(β=[-itran(θ[1]); θ[2:K]], σ=itran.(θ[(K+1):(2*K)],lb=lb), γ=θ[(2*K+1):end])
   end
   (θ=θ, unpack=unvec)
 end
@@ -233,10 +232,10 @@ function estimateRCIVlogit(dat::BLPData;
                            method=:MPEC, verbose=true, W=I,
                            max_iter = (method==:NFXP ? 1000 : 200),
                            optimizer=(method==:NFXP ? LBFGS(linesearch=LineSearches.HagerZhang()) :
-                                      with_optimizer(Ipopt.Optimizer,
-                                                     max_iter= max_iter,
-                                                     start_with_resto = "no",
-                                                     print_level = 5*verbose)),
+                                      optimizer_with_attributes(Ipopt.Optimizer, 
+                                                     "max_iter" => max_iter,
+                                                     "start_with_resto" => "no",
+                                                     "print_level" => 5*verbose)),
                            β0 = nothing,
                            σ0 = nothing
                            )
@@ -374,7 +373,7 @@ end
 
 
 """ 
-    estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I, optimizer=with_optimizer(Ipopt.Optimizer, start_with_resto="no"), supply=true)
+    estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I, optimizer=optimizer_with_attributes(Ipopt.Optimizer, start_with_resto=>"no"), supply=true)
 
 
 Estimates a random coefficients BLP demand model
@@ -386,10 +385,10 @@ Estimates a random coefficients BLP demand model
 - `W=I` `L × L` weighting matrix for moments. 
 - `max_iter=200` number of iterations of optimizer
 - `optimizer=(method==:NFXP ? LBFGS(linesearch=LineSearches.HagerZhang()) :
-                              with_optimizer(Ipopt.Optimizer,
-                                             max_iter= 100,
-                                             start_with_resto = "no",
-                                             print_level = 5*verbose))`
+                              optimizer_with_attributes(Ipopt.Optimizer,
+                                             "max_iter"=> 100,
+                                             "start_with_resto" => "no",
+                                             "print_level" => 5*verbose))`
    optimization method. See below for details.
 - `supply=true` whether to include supply side moments
 - `β0=nothing` initial value for β. If isnothing, then will set automatically.
@@ -442,11 +441,10 @@ See also: [`optimalIV`](@ref), [`varianceBLP`](@ref), [`simulateBLP`](@ref)
 function estimateBLP(dat::BLPData; method=:MPEC, verbose=true, W=I,
                      max_iter = (method==:NFXP ? 1000 : 200),
                      optimizer=(method==:NFXP ? LBFGS(linesearch=LineSearches.HagerZhang()) :
-                                with_optimizer(Ipopt.Optimizer,
-                                               max_iter= max_iter,
-                                               start_with_resto = "no",
-                                               print_level = 5*verbose,
-                                               )),
+                     optimizer_with_attributes(Ipopt.Optimizer, 
+                        "max_iter" => max_iter,
+                        "start_with_resto" => "no",
+                        "print_level" => 5*verbose)),
                      supply = true,
                      β0 = nothing,
                      σ0 = nothing,
@@ -799,8 +797,8 @@ function polyreg(xpred::AbstractMatrix,
     for d in 1:degree
       Xnew = Array{eltype(xdata), 2}(undef, size(xdata,1), size(X,2)*size(xdata,2))
       k = 1
-      for c in 1:size(xdata,2)
-        for j in 1:size(X,2)
+      for c in axes(xdata)[2]
+        for j in axes(X)[2]
           @views Xnew[:, k] = X[:,j] .* xdata[:,c]
           k += 1
         end
@@ -851,19 +849,19 @@ function optimalIV(β,σ, γ,
   Ω = cov(e, dims=1)
   Di = reshape(ForwardDiff.jacobian(ei, θ), size(e)..., length(θ))
   Y = zeros(size(e,1), size(e,2)*length(θ))
-  for jt in 1:size(Di,1)
+  for jt in axes(Di)[1]
     Y[jt,:] .= (inv(Ω)*Di[jt,:,:])[:]
   end
   Z = hcat((d->[d.zd; d.zs]).(dat)...)'
   zstar = polyreg(Z,Z,Y, degree=degree)
   out = Array{MarketData,1}(undef, length(dat))
   jt = 0
-  for t in 1:length(dat)
+  for t in eachindex(dat)
     J = length(dat[t].s)
     M = size(zstar,2)÷2
     out[t] = MarketData(dat[t].s, dat[t].x, dat[t].w, dat[t].firmid,
-                        zstar[jt .+ (1:J), 1:M]',
-                        zstar[jt .+ (1:J), (M+1):end]',
+                        Matrix(zstar[jt .+ (1:J), 1:M]'),
+                        Matrix(zstar[jt .+ (1:J), (M+1):end]'),
                         dat[t].ν)
     jt += J
   end

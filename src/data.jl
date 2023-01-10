@@ -1,35 +1,35 @@
 """
 Data from a single market for a BLP demand model
 """
-struct MarketData
+struct MarketData{VType <: AbstractVector, MType <: AbstractMatrix, IDType <: AbstractVector}
   """
   `J` vector of shares
   """
-  s::AbstractVector
+  s::VType
   """
   `K × J` matrix of good characteristics. If using `estimateBLP`, `x[1,:]`, should be prices
   """
-  x::AbstractMatrix
+  x::MType
   """
   `L × J` matrix of cost shifters
   """
-  w::AbstractMatrix
+  w::MType
   """
   `J` vector of firm identifies
   """
-  firmid::AbstractVector
+  firmid::IDType
   """
   `M × J` matrix of demand instruments
   """
-  zd::AbstractMatrix
+  zd::MType
   """
   `M × J` matrix of supply instruments
   """
-  zs::AbstractMatrix
+  zs::MType
   """
   `K × S` matrix of draws of ν for Monte-Carlo integration
   """
-  ν::AbstractMatrix
+  ν::MType
 end
 
 """
@@ -40,7 +40,7 @@ const BLPData = Array{MarketData,1}
 """
 Constructs data for BLP demand model from arrays. Compared to [`MarketData`](@ref), each argument should have one more dimension with length `T`=number of markets
 """
-function BLPData(s::AbstractMatrix, 
+function blpdata(s::AbstractMatrix, 
                  x::AbstractArray{T, 3} where T,
                  ν::AbstractArray{T,3} where T,
                  ivdemand::AbstractArray{T,3} where T,
@@ -58,7 +58,7 @@ end
 """
 Constructs data for IV random coefficients logit model from arrays. Compared to [`MarketData`](@ref), each argument should have one more dimension with length `T`=number of markets
 """
-function BLPData(s::AbstractMatrix, 
+function blpdata(s::AbstractMatrix, 
                  x::AbstractArray{T, 3} where T,
                  ν::AbstractArray{T,3} where T,
                  ivdemand::AbstractArray{T,3} where T;
@@ -73,7 +73,7 @@ end
 
 
 """
-    function BLPData(df::AbstractDataFrame,
+    function blpdata(df::AbstractDataFrame,
                  mid::Symbol,
                  firmid::Symbol,
                  s::Symbol,                 
@@ -97,7 +97,7 @@ Construct BLPData from a DataFrame.
 
 See also [`MarketData`](@ref)
 """
-function BLPData(df::DataFrame,
+function blpdata(df::DataFrame,
                  mid::Symbol,
                  firmid::Symbol,
                  s::Symbol,                 
@@ -131,5 +131,6 @@ Returns a DataFrame.
 function data_blp1999()
   csvfile=normpath(joinpath(dirname(Base.pathof(BLPDemand)),"..","data","blp_1999_data.csv"))
   dt = CSV.read(csvfile)
+  return(dt)
 end
 

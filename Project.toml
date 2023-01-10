@@ -1,7 +1,7 @@
 name = "BLPDemand"
 uuid = "c9742c04-3141-4011-ba40-1120baaac28c"
 authors = ["Paul Schrimpf <paul.schrimpf@gmail.com>"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
@@ -17,7 +17,6 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsModels = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
 
 [compat]
-Ipopt = "^0.6.5"
 julia = "1"
 
 [extras]

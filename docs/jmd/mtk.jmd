@@ -1,6 +1,6 @@
 ---
 title       : "Using MTK.jl for BLP estimation"
-subtitle    : 
+subtitle    :
 author      : Paul Schrimpf
 date        : `j using Dates; print(Dates.today())`
 bibliography: "blp.bib"
@@ -16,17 +16,17 @@ options:
 
 This work is licensed under a [Creative Commons Attribution-ShareAlike
 4.0 International
-License](http://creativecommons.org/licenses/by-sa/4.0/) 
+License](http://creativecommons.org/licenses/by-sa/4.0/)
 
 # Simulate Data
 
 ```julia
 using BLPDemand, Statistics, PrettyTables, Printf, Random, LinearAlgebra
 K = 2             # number of characteristics
-J = 3             # number of products
+J = 2             # number of products
 S = 4            # draws of nu
-T = 5           # number of markets
-β = ones(K)*2 
+T = 50           # number of markets
+β = ones(K)*2
 β[1] = -1.5       # important for equilibrium that higher prices lower sales
 σ = ones(K)
 σ[1] = 0.2
@@ -40,99 +40,12 @@ Random.seed!(98426)
 # MTK
 
 ```julia
-using ModelingToolkit, GalacticOptim, Symbolics, Optim
-import DiffEqBase
-import RuntimeGeneratedFunctions: @RuntimeGeneratedFunction
-import ModelingToolkit: varmap_to_vars
+using ModelingToolkit, GalacticOptim, Symbolics, Optim, MathOptInterface, Ipopt
+#import DiffEqBase
+#import RuntimeGeneratedFunctions: @RuntimeGeneratedFunction
+#import ModelingToolkit: varmap_to_vars
 
-function EqualityConstrainedOptimizationProblem{iip}(sys::OptimizationSystem, u0,
-                                                     parammap=DiffEqBase.NullParameters();
-                                                     lb=nothing, ub=nothing,
-                                                     grad = false,
-                                                     hess = false, sparse = false,
-                                                     checkbounds = false,
-                                                     linenumbers = true, parallel=Symbolics.SerialForm(),
-                                                     con_j = grad, con_h = hess,
-                                                     eval_expression=true,
-                                                     kwargs...) where iip
-  dvs = states(sys)
-  ps = parameters(sys)
-  
-  f = generate_function(sys,checkbounds=checkbounds,linenumbers=linenumbers,
-                        expression=Val{!eval_expression}) # OptimizationProblemExpr sets Val{true}.
-  if grad
-    grad_oop,grad_iip = generate_gradient(sys,checkbounds=checkbounds,linenumbers=linenumbers,
-                                          parallel=parallel,expression=Val{false})
-    _grad(u,p) = grad_oop(u,p)
-    _grad(J,u,p) = (grad_iip(J,u,p); J)
-  else
-    _grad = nothing
-  end
-  
-  if hess
-    hess_oop,hess_iip = generate_hessian(sys,checkbounds=checkbounds,linenumbers=linenumbers,
-                                         sparse=sparse,parallel=parallel,expression=Val{false})
-    _hess(u,p) = hess_oop(u,p)
-    _hess(J,u,p) = (hess_iip(J,u,p); J)
-  else
-    _hess = nothing
-  end
-
-  consys = NonlinearSystem(sys.equality_constraints, states(sys), parameters(sys),
-                           name=Symbol(String(sys.name)*"_equality_constraints"))
-  con_oop,con_iip = generate_function(consys, dvs, ps; expression=Val{!eval_expression}, kwargs...)
-  #con_oop,con_iip = eval_expression ? (@RuntimeGeneratedFunction(ex) for ex in con_gen) : con_gen  
-  _con(u,p) = con_oop(u,p)
-  _con(du,u,p) = con_iip(du,u,p)
-  if con_j
-    jac_gen = generate_jacobian(consys, dvs, ps;
-                                simplify=false, sparse = sparse,
-                                expression=Val{!eval_expression}, kwargs...);
-    jac_oop,jac_iip = jac_gen #eval_expression ? (@RuntimeGeneratedFunction(ex) for ex in jac_gen) : jac_gen
-    _con_j(u,p) = jac_oop(u,p) # not used it appears 
-    _con_j(J,u,p) = jac_iip(J,u,p)
-  else
-    _con_j = nothing
-  end
-
-  if con_h
-    ch_iip = Vector{Function}(undef, length(sys.equality_constraints))
-    for (i, e) in enumerate(sys.equality_constraints)
-      println("Building Hession for contraint $i of $(length(sys.equality_constraints))")
-      ocsys = OptimizationSystem(Num(e.rhs), states(sys), parameters(sys),
-                                 name=Symbol(String(sys.name)*"_equality_constrain_o$i"))
-      ch_oop,ch_iip[i] = generate_hessian(ocsys,checkbounds=checkbounds,linenumbers=linenumbers,
-                                          sparse=sparse,parallel=parallel,expression=Val{false})
-    end
-    # based on https://github.com/SciML/GalacticOptim.jl/blob/6d0de7f57528d67bbdba4682926d1bf0a13952dc/src/solve/optim.jl#L273
-    _con_h = (res,u,p) ->(
-      for (r,h) in zip(res, ch_iip)
-        h(r,u,p)
-      end
-    )
-  else
-    _con_h = nothing
-  end
-  
-  
-  _f = DiffEqBase.OptimizationFunction{iip,AutoModelingToolkit,typeof(f),typeof(_grad),typeof(_hess),Nothing,
-                                       typeof(_con), typeof(_con_j), typeof(_con_h)
-                                       }(f,AutoModelingToolkit(),_grad,_hess,nothing, _con, _con_j, _con_h)
-
-  defs = ModelingToolkit.defaults(sys)
-  u0 = varmap_to_vars(u0,dvs; defaults=defs)
-  p = varmap_to_vars(parammap,ps; defaults=defs)
-  lb = varmap_to_vars(lb,dvs; check=false)
-  ub = varmap_to_vars(ub,dvs; check=false)
-  #lb = -Inf*ones(length(u0))
-  #ub = Inf*ones(length(u0))
-  lcons = [e.lhs for e in sys.equality_constraints]
-  ucons = lcons
-  prob  = OptimizationProblem{iip}(_f,u0,p;lb=lb,ub=ub,lcons=lcons,ucons=ucons,kwargs...)
-
-  return(prob)
-end
-
+include("eqcop.jl")
 
 sharefunc(δ, Σ, x, ν) =
   reshape(sum(( exp.(δ .+ x'*Σ*ν)) ./ (1 .+ sum(exp.(δ .+ x'*Σ*ν), dims=1)), dims=2)/size(ν,2), length(δ))
@@ -150,7 +63,7 @@ function blpmtk(data::AbstractVector{MarketData})
   #∫ = Integral(ν ∈ DomainSets.OpenInterval(-Inf,Inf))
   JT = sum(length(d.s) for d in data)
   shareeq = Vector{Symbolics.Arr{Any,2}}(undef, length(data))
-  #sharefn = Vector{Symbolics.Arr{Num,2}}(undef, length(data))  
+  #sharefn = Vector{Symbolics.Arr{Num,2}}(undef, length(data))
   for i in eachindex(data)
     #x = data[i].x
     #ν = data[i].ν
@@ -165,7 +78,7 @@ function blpmtk(data::AbstractVector{MarketData})
   cons = reshape(vcat((data[i].s .~ sharefunc(collect(δ[i]), collect(Σ), data[i].x, data[i].ν) for i in eachindex(data))...), JT)
   moments = sum(data[i].zd*(collect(δ[i]) - data[i].x'*collect(β)) for i in eachindex(data))/length(data)
   W = I
-  
+
   loss = length(data)*moments'*W*moments;
 
   params = vcat(collect(β), collect(σ), collect.(δ)...) # states to an ODE, but params for econometrics
@@ -173,15 +86,32 @@ function blpmtk(data::AbstractVector{MarketData})
 
   initial_vals = vcat( [-1, 1], ones(K), zeros(J*T))
   u0 = [p => v for (p, v) in zip(params, initial_vals)]
-  prob = EqualityConstrainedOptimizationProblem(sys, u0, [],grad=true,hess=true, sparse=true)
 
-  solve(prob, IPNewton(), show_trace=true)
-  
+  # make sure exp(δ + xΣν) is finite
+  maxxν = maximum(maximum(vec(d.x*d.ν)) for d in sim)
+  maxσ = 10.
+  maxδ = minimum(300. - maxxν*maxσ)
+  lb = [-10, -10,    # β
+        fill(0.05,K)...,  # σ
+        fill(-maxδ, JT)...] # δ
+  ub = [0.01, 10,
+        fill(maxσ, K)...,
+        fill(maxδ, JT)...] # δ
+  prob = EQCOP.equalityConstrainedOptimizationProblem(sys, u0, [],lb=lb,ub=ub,grad=true,hess=true, sparse=false)
+
+
+  return(prob)
 end
 
+prob = blpmtk(sim)
 
-sharefunc(collect(δ[i]), Σ, data[i].x, data[i].ν)[1] isa Num
+sol = solve(prob,  Ipopt.Optimizer(); max_iter = 250,
+            print_level=5)
+
+
+
+soln = solve(prob, IPNewton(), show_trace=true)
+#sharefunc(collect(δ[i]), Σ, data[i].x, data[i].ν)[1] isa Num
 
 ```
 
-# 

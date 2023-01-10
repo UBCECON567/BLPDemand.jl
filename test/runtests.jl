@@ -132,7 +132,7 @@ end
   m0 = demandmoments(β, σ, sim).moments;
 
   # this test will fail with approximate probability 1 - cdf(Normal(),3)^(J*size(π,1)) ≈ 0.01
-  #@test isapprox(m0, zeros(eltype(m0), size(m0)), atol= 5/sqrt(T))
+  @test isapprox(m0, zeros(eltype(m0), size(m0)), atol= 5/sqrt(T))
   # test that moving away from true parameters increases moments
   @test sum(demandmoments(β.+1.0, σ, sim).moments.^2) > sum(m0.^2)
   @test sum(demandmoments(β, σ.+1.0, sim).moments.^2) > sum(m0.^2)
@@ -173,13 +173,13 @@ end
   @time n2 = estimateBLP(sim, method=:NFXP, verbose=true, supply=false)
   @time mpec = estimateRCIVlogit(sim, method=:MPEC, verbose=true)
   @time m2 = estimateBLP(sim, method=:MPEC, verbose=true, supply=false,
-                         optimizer=with_optimizer(Ipopt.Optimizer,
-                                                   max_iter= 200,
-                                                   start_with_resto = "no",
+                         optimizer=optimizer_with_attributes(Ipopt.Optimizer,
+                                                   "max_iter" => 200,
+                                                   "start_with_resto" => "no",
                                                    #hessian_approximation="limited-memory",
                                                    #max_soc=10,
                                                    #soc_method=0,
-                                                   print_level = 5))
+                                                   "print_level" => 5))
 
   @test isapprox(nfxp.β, mpec.β, rtol=eps(Float64)^(1/4))
   @test isapprox(nfxp.σ, mpec.σ, rtol=eps(Float64)^(1/4))
@@ -210,21 +210,21 @@ end
 
   @time nfxp = estimateBLP(sim, method=:NFXP, verbose=true)
   @time mpec = estimateBLP(sim, method=:MPEC, verbose=true,
-                           optimizer=with_optimizer(Ipopt.Optimizer,
-                                                    max_iter= 100,
-                                                    start_with_resto = "no",
+                           optimizer=optimizer_with_attributes(Ipopt.Optimizer,
+                                                    "max_iter" => 100,
+                                                    "start_with_resto" => "no",
                                                     #hessian_approximation="limited-memory",
                                                     #watchdog_shortened_iter_trigger = 5,
-                                                    print_level = 5))
+                                                    "print_level" => 5))
 
   @time gel = estimateBLP(sim,  method=:GEL, verbose=true,
-                          optimizer=with_optimizer(Ipopt.Optimizer,
-                                                   max_iter= 200,
-                                                   start_with_resto = "yes",
+                          optimizer=optimizer_with_attributes(Ipopt.Optimizer,
+                                                   "max_iter" => 200,
+                                                   "start_with_resto" => "yes",
                                                    #hessian_approximation="limited-memory",
                                                    #max_soc=10,
                                                    #soc_method=0,
-                                                   print_level = 5))
+                                                   "print_level" => 5))
 
   @test isapprox(nfxp.β, mpec.β, rtol=eps(Float64)^(1/4))
   @test isapprox(nfxp.σ, mpec.σ, rtol=eps(Float64)^(1/4))
