@@ -11,14 +11,11 @@ github](https://github.com/UBCECON567/BLPDemand.jl). The same document
 generates both static webpages and a [jupyter
 notebook.](replicateblp.ipynb)
 
-Introduction
-============
+# Introduction
 
-This assigment will attempt to replicate the results of (Berry,
-Levinsohn, and Pakes [1995](#ref-berry1995)).
+This assigment will attempt to replicate the results of \[@berry1995\].
 
-Getting started
-===============
+# Getting started
 
 Load the package for this assignment from github.
 
@@ -33,11 +30,9 @@ catch
 end
 ```
 
-Problem 1: load and explore the data
-====================================
+# Problem 1: load and explore the data
 
-The data from (Berry, Levinsohn, and Pakes [1995](#ref-berry1995)) is
-included in the `BLPDemand.jl` package.
+The data from \[@berry1995\] is included in the `BLPDemand.jl` package.
 
 ``` julia
 df = data_blp1999()
@@ -49,29 +44,29 @@ if (false)
     using Blink
     w = Blink.window()
     body!(w, TableView.showtable(df));
-  else 
+  else  # this may work on a local installation of jupyter, but it doesn't on vse.syzygy.ca ...
     TableView.showtable(df);
   end
 end
 ```
 
+    Error: ArgumentError: provide a valid sink argument, like `using DataFrames
+    ; CSV.read(source, DataFrame)`
+
 Create some tables and figures to explore the data. You may want to
-reproduce table I and/or II from (Berry, Levinsohn, and Pakes
-[1995](#ref-berry1995)).
+reproduce table I and/or II from \[@berry1995\].
 
 ``` julia
 # using Plots, DataFramesMeta, StatsPlots # (or whatever)
 ```
 
-Problem 2: Logit Demand
-=======================
+# Problem 2: Logit Demand
 
-Part I
-------
+## Part I
 
-Reproduce table III of (Berry, Levinsohn, and Pakes
-[1995](#ref-berry1995)). First you’ll need to create instruments as in
-section 5.1 of the paper. The following code should do it.
+Reproduce table III of \[@berry1995\]. First you’ll need to create
+instruments as in section 5.1 of the paper. The following code should do
+it.
 
 ``` julia
 using DataFrames
@@ -96,7 +91,7 @@ df=makeinstruments(df, exog);
 nothing
 ```
 
-    nothing
+    Error: UndefVarError: df not defined
 
 For the regressions, you should modify the following.
 
@@ -106,26 +101,9 @@ col2 = reg(df, @formula(logit_depvar ~ hpwt + (price ~ const_own + const_other +
 regtable(col2)
 ```
 
-    --------------------------
-                  logit_depvar
-                  ------------
-                           (1)
-    --------------------------
-    (Intercept)      -7.283***
-                       (0.166)
-    hpwt              5.735***
-                       (0.761)
-    price            -0.215***
-                       (0.015)
-    --------------------------
-    Estimator               IV
-    --------------------------
-    N                    2,217
-    R2                  -0.236
-    --------------------------
+    Error: UndefVarError: df not defined
 
-Part II
--------
+## Part II
 
 Calculate the elasticities of demand implied by the logit model. Report
 how many own price elasticities have absolute value less than one
@@ -135,8 +113,10 @@ For computing the elastiticities, you could adapt the code from the
 [BLPDemand.jl
 docs](https://ubcecon567.github.io/BLPDemand.jl/dev/simulation/#Calculating-Elasticities-1)
 
-Problem 3: Demand Side Estimation
-=================================
+``` julia
+```
+
+# Problem 3: Demand Side Estimation
 
 Estimate a random coefficients demand model. Report the parameter
 estimates and standard errors. Use the functions `estimateRCIVlogit` and
@@ -168,8 +148,9 @@ using LinearAlgebra: diag, I
 # or make a nicer table as in https://ubcecon567.github.io/BLPDemand.jl/dev/simulation/#Estimation-1
 ```
 
-Problem 4: Demand and Supply
-============================
+    Error: UndefVarError: df not defined
+
+# Problem 4: Demand and Supply
 
 Estimate the full BLP model. Use the `estimateBLP` and `varianceBLP`
 functions. See [the
@@ -178,15 +159,19 @@ for example usage. Note that the paper has price enter the model as
 $\log(y-p)$, but we lack data on $y$, so just have price enter linearly
 or log-linearly with a random coefficient.
 
-Problem 5: Elasticities
-=======================
+``` julia
+```
+
+# Problem 5: Elasticities
 
 Compute price elasticities (with standard errors) based on your
 estimates. You can adapt the code in [the
 docs](https://ubcecon567.github.io/BLPDemand.jl/dev/simulation/#Calculating-Elasticities-1).
 
-Problem 6: Merger Simulation
-============================
+``` julia
+```
+
+# Problem 6: Merger Simulation
 
 This is a more challenging problem with less guidance. Consider it
 optional.
@@ -195,15 +180,3 @@ Use your estimates to simulate a merger between firm 11 (Saab, I think)
 and firm 19 (GM, I think). You can do this by modifying the
 `simulateBLP` function. Report the effect of the merger on prices. Be
 sure to include standard errors.
-
-<div id="refs" class="references hanging-indent" markdown="1">
-
-<div id="ref-berry1995" markdown="1">
-
-Berry, Steven, James Levinsohn, and Ariel Pakes. 1995. “Automobile
-Prices in Market Equilibrium.” *Econometrica* 63 (4): pp. 841–90.
-<http://www.jstor.org/stable/2171802>.
-
-</div>
-
-</div>
