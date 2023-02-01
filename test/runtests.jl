@@ -1,4 +1,5 @@
 using Revise
+#push!(LOAD_PATH, "../BLPDemand")
 using BLPDemand, Test, ForwardDiff, FiniteDiff, LinearAlgebra, Statistics, JuMP, Ipopt
 
 @testset "share and delta" begin
@@ -188,38 +189,94 @@ end
   @test isapprox(n2.β, m2.β, rtol=eps(Float64)^(1/4))
   @test isapprox(n2.σ, m2.σ, rtol=eps(Float64)^(1/4))
 
-  
+
   @show fracRCIVlogit(sim)
 
 end
 
+@testset "NFXP" begin
+  K = 3
+  J = 5 # number of products
+  T = 100 # number of markets
+  β = ones(K)
+  β[1] = -0.1
+  σ = [0.2, 0.5*ones(length(β)-1)...] # Σ = Diagonal(σ)
+  γ = ones(2) # marginal cost coefficients
+  S = 10 # number of Monte-Carlo draws per market and product to integrate out ν
+  sξ = 0.2 # standard deviation of demand shocks
+  sω = 0.2 # standard deviation of cost shocks
+
+  sim, ξ, ω = simulateBLP(J,T, β, σ, γ, S, varξ=sξ, varω=sω);
+  @show quantile(vcat((d->d.s[:]).(sim)...), [0, 0.05, 0.5, 0.95, 1])
+
+  β0, σ0 = fracRCIVlogit(sim)
+  σ0 = abs.(σ0)
+  lb = min(minimum(σ0)/2,1e-2)
+  γ0 = γ
+  θ0, unpack = pack(β0, σ0, γ0, lb=lb)
+  @testset "pack-unpack" begin
+    @test β0 ≈ unpack(θ0).β
+    @test σ0 ≈ unpack(θ0).σ
+    @test γ0 ≈ unpack(θ0).γ
+    @test θ0 ≈ pack(unpack(θ0)..., lb=lb)[1]
+  end
+
+  # this is how initial γ is set
+  m, ξ0 = demandmoments(β0, 0*σ0, sim)
+  m, logmc0 = supplymoments(0*γ0, β0, 0*σ0, ξ0, sim, costf=x->BLPDemand.safelog(x,δ=0.01) )
+  Y = vcat(logmc0...)
+  X = hcat((d->d.w).(sim)...)
+  X' \ Y
+
+
+  obj = BLPDemand.nfxpobjective(sim, unpack, true, :log, I)
+  @testset "Derivatives" begin
+    f = β->demandmoments(β,σ0,sim)[1]
+    @test ForwardDiff.jacobian(f, β0) ≈ FiniteDiff.finite_difference_jacobian(f,β0)
+    f = s->demandmoments(β0,s,sim)[1]
+    @test isapprox(ForwardDiff.jacobian(f, σ0), FiniteDiff.finite_difference_jacobian(f,σ0), rtol=1e-4)
+    _, ξ = demandmoments(β0, σ0, sim)
+    f = β->supplymoments(γ0, β, σ0, ξ, sim, costf=BLPDemand.safelog)[1]
+    @test isapprox(ForwardDiff.jacobian(f, β0),FiniteDiff.finite_difference_jacobian(f,β0),rtol=1e-4)
+    f = γ->supplymoments(γ, β0, σ0, ξ, sim, costf=BLPDemand.safelog)[1]
+    @test isapprox(ForwardDiff.jacobian(f, γ0),FiniteDiff.finite_difference_jacobian(f,γ0),rtol=1e-4)
+
+    @test isapprox(ForwardDiff.gradient(obj,θ0), FiniteDiff.finite_difference_gradient(obj,θ0), rtol=1e-4)
+  end
+
+end
+
+
 @testset "estimate BLP" begin
 
   K = 3
-  J = 10
-  S = 10
+  J = 5
+  S = 20
   T = 50
-  β = ones(K)*2
-  β[1] = -1.5
+  β = ones(K)
+  β[1] = -0.5
   σ = ones(K)
   σ[1] = 0.2
   γ = ones(2)*0.3
+  sξ = 0.2
+  sω = 0.2
 
-  sim, ξ, ω = simulateBLP(J,T, β, σ, γ, S, varξ=0.2, varω=0.2);
+  sim, ξ, ω = simulateBLP(J,T, β, σ, γ, S, varξ=sξ, varω=sω);
   @show quantile(vcat((d->d.s[:]).(sim)...), [0, 0.05, 0.5, 0.95, 1])
 
   @time nfxp = estimateBLP(sim, method=:NFXP, verbose=true)
+
   @time mpec = estimateBLP(sim, method=:MPEC, verbose=true,
                            optimizer=optimizer_with_attributes(Ipopt.Optimizer,
-                                                    "max_iter" => 100,
-                                                    "start_with_resto" => "no",
+                                                    "max_iter" => 500,
+                                                    #"start_with_resto" => "yes",
                                                     #hessian_approximation="limited-memory",
-                                                    #watchdog_shortened_iter_trigger = 5,
+                                                    #"watchdog_shortened_iter_trigger" => 1,
                                                     "print_level" => 5))
 
   @time gel = estimateBLP(sim,  method=:GEL, verbose=true,
                           optimizer=optimizer_with_attributes(Ipopt.Optimizer,
-                                                   "max_iter" => 200,
+                                                   "max_iter" => 500,
                                                    "start_with_resto" => "yes",
                                                    #hessian_approximation="limited-memory",
                                                    #max_soc=10,
@@ -230,22 +287,39 @@ end
   @test isapprox(nfxp.σ, mpec.σ, rtol=eps(Float64)^(1/4))
   @test isapprox(nfxp.γ, mpec.γ, rtol=eps(Float64)^(1/4))
 
+  # These tests might fail, but should not fail by too much
   @test isapprox(gel.β, mpec.β, rtol=eps(Float64)^(1/4))
   @test isapprox(gel.σ, mpec.σ, rtol=eps(Float64)^(1/4))
   @test isapprox(gel.γ, mpec.γ, rtol=eps(Float64)^(1/4))
 
-  v = varianceBLP(mpec.β, mpec.σ, mpec.γ, sim)
+  v = varianceBLP(nfxp.β, nfxp.σ, nfxp.γ, sim)
 
   simo=optimalIV(nfxp.β, max.(nfxp.σ, 0.1), nfxp.γ, sim);
 
   @time no = estimateBLP(simo, method=:NFXP, verbose=true)
-  @time mo = estimateBLP(simo, method=:MPEC, verbose=true)
-  @time go = estimateBLP(simo, method=:GEL, verbose=true)
+  @time mo = estimateBLP(simo, method=:MPEC, verbose=true,
+                         optimizer=optimizer_with_attributes(Ipopt.Optimizer,
+                                                             "max_iter" => 500,
+                                                             "start_with_resto" => "yes",
+                                                             #hessian_approximation="limited-memory",
+                                                             #"watchdog_shortened_iter_trigger" => 1,
+                                                             "print_level" => 5))
+
+  @time go = estimateBLP(simo, method=:GEL, verbose=true,
+                         optimizer=optimizer_with_attributes(Ipopt.Optimizer,
+                                                             "max_iter" => 500,
+                                                             "start_with_resto" => "yes",
+                                                             #hessian_approximation="limited-memory",
+                                                             #max_soc=10,
+                                                             #soc_method=0,
+                                                             "print_level" => 5))
+
 
   @test isapprox(no.β, mo.β, rtol=eps(Float64)^(1/4))
   @test isapprox(no.σ, mo.σ, rtol=eps(Float64)^(1/4))
   @test isapprox(no.γ, mo.γ, rtol=eps(Float64)^(1/4))
 
+  # These tests might fail, but should not fail by too much
   @test isapprox(go.β, mo.β, rtol=eps(Float64)^(1/4))
   @test isapprox(go.σ, mo.σ, rtol=eps(Float64)^(1/4))
   @test isapprox(go.γ, mo.γ, rtol=eps(Float64)^(1/4))
