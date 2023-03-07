@@ -1,6 +1,6 @@
 ---
 title       : "Assignment: reproducing Berry, Levinsohn, & Pakes (1995)"
-subtitle    : 
+subtitle    :
 author      : Paul Schrimpf
 date        : `j using Dates; print(Dates.today())`
 bibliography: "blp.bib"
@@ -16,7 +16,7 @@ options:
 
 This work is licensed under a [Creative Commons Attribution-ShareAlike
 4.0 International
-License](http://creativecommons.org/licenses/by-sa/4.0/) 
+License](http://creativecommons.org/licenses/by-sa/4.0/)
 
 ### About this document
 
@@ -31,7 +31,7 @@ This assigment will attempt to replicate the results of [@berry1995].
 
 # Getting started
 
-Load the package for this assignment from github. 
+Load the package for this assignment from github.
 
 
 ```julia
@@ -55,7 +55,7 @@ df = data_blp1999()
 # Optionally, if you like being able to view all your data
 if (false)
   using TableView
-  if (notusingjupyterorjuno) # this will throw an error. Delete it  or the else branch 
+  if (notusingjupyterorjuno) # this will throw an error. Delete it  or the else branch
     using Blink
     w = Blink.window()
     body!(w, TableView.showtable(df));
@@ -106,9 +106,9 @@ nothing
 For the regressions, you should modify the following.
 
 ```julia; cache=true
-using FixedEffectModels, RegressionTables
+using FixedEffectModels
 col2 = reg(df, @formula(logit_depvar ~ hpwt + (price ~ const_own + const_other + hpwt_own + hpwt_other)))
-regtable(col2)
+col2
 ```
 
 ## Part II
